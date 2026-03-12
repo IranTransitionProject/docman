@@ -1,79 +1,252 @@
 """
-Tests for DoclingBackend (unit tests, no Docling required).
+Tests for DoclingBackend (unit tests -- no Docling installation required).
 
-These tests validate input validation (path traversal, file existence)
-without invoking Docling itself. Docling is NOT mocked because the
-existing tests only exercise the pre-extraction validation logic.
+Covers three areas:
+    1. Input validation -- path traversal rejection, missing file detection.
+    2. Happy-path extraction -- mocks Docling's DocumentConverter to verify
+       the full extraction flow (text, metadata, JSON output) without a
+       real PDF.
+    3. Error handling -- verifies that Docling failures and I/O errors are
+       wrapped in DoclingConversionError with the original cause preserved.
 
-FIXME: `json`, `Path`, `MagicMock`, and `patch` are imported but never used.
-       Remove unused imports.
-
-FIXME: `asyncio` is imported inside each test function rather than at the top.
-       Move `import asyncio` to the module level.
-
-TODO: Add a happy-path test that mocks DocumentConverter to verify the full
-      extraction flow without needing a real PDF:
-
-      @patch("docman.backends.docling_backend.DocumentConverter")
-      def test_extraction_success(mock_converter_cls, backend, workspace):
-          # Create a fake source file
-          (workspace / "test.pdf").write_bytes(b"fake pdf content")
-
-          # Mock Docling's conversion result
-          mock_doc = MagicMock()
-          mock_doc.export_to_markdown.return_value = "Extracted text here"
-          mock_doc.iterate_items.return_value = []
-          mock_doc.pages = [MagicMock()]
-          mock_converter_cls.return_value.convert.return_value.document = mock_doc
-
-          result = asyncio.run(backend.process(
-              {"file_ref": "test.pdf"},
-              {"workspace_dir": str(workspace)},
-          ))
-          assert result["output"]["file_ref"] == "test_extracted.json"
-          assert (workspace / "test_extracted.json").exists()
-
-TODO: Add tests for edge cases:
-      - Very large files (memory limits)
-      - Non-PDF/DOCX files (Docling error handling)
-      - Workspace dir doesn't exist
-      - File with no text content
+All tests run with ``asyncio.run()`` to exercise the real async path
+(``asyncio.get_running_loop()`` + ``run_in_executor``).
 """
-# FIXME: These imports are unused — remove them.
+import asyncio
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
+from unittest.mock import MagicMock, patch
 
-from docman.backends.docling_backend import DoclingBackend
+from docman.backends.docling_backend import DoclingBackend, DoclingConversionError
 
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def workspace(tmp_path):
+    """Provide an isolated temporary workspace directory for each test."""
     return tmp_path
 
 
 @pytest.fixture
 def backend(workspace):
+    """Create a DoclingBackend pointing at the temporary workspace."""
     return DoclingBackend(workspace_dir=str(workspace))
 
 
-def test_path_traversal_rejected(backend, workspace):
-    """Backend rejects file_ref that escapes workspace."""
-    with pytest.raises(ValueError, match="Path traversal"):
-        import asyncio
-        asyncio.run(backend.process(
-            {"file_ref": "../../etc/passwd"},
+# ---------------------------------------------------------------------------
+# Input validation tests
+# ---------------------------------------------------------------------------
+
+class TestInputValidation:
+    """Tests for pre-extraction input validation (no Docling interaction)."""
+
+    def test_path_traversal_rejected(self, backend, workspace):
+        """file_ref containing '../' that escapes workspace must raise ValueError."""
+        with pytest.raises(ValueError, match="Path traversal"):
+            asyncio.run(backend.process(
+                {"file_ref": "../../etc/passwd"},
+                {"workspace_dir": str(workspace)},
+            ))
+
+    def test_file_not_found(self, backend, workspace):
+        """file_ref pointing to a non-existent file must raise FileNotFoundError."""
+        with pytest.raises(FileNotFoundError):
+            asyncio.run(backend.process(
+                {"file_ref": "nonexistent.pdf"},
+                {"workspace_dir": str(workspace)},
+            ))
+
+
+# ---------------------------------------------------------------------------
+# Happy-path extraction test
+# ---------------------------------------------------------------------------
+
+class TestExtraction:
+    """Tests that verify the full extraction flow with mocked Docling."""
+
+    @patch("docman.backends.docling_backend.DoclingBackend._build_converter")
+    def test_extraction_produces_expected_output(self, mock_build, backend, workspace):
+        """Mocked Docling conversion should produce correct output dict and JSON file.
+
+        Verifies:
+            - The result contains the expected file_ref, page_count, has_tables,
+              sections, and text_preview fields.
+            - The extracted JSON file is written to the workspace directory.
+            - The JSON file contents match the mock document data.
+        """
+        # Create a fake source file (content doesn't matter -- Docling is mocked).
+        (workspace / "report.pdf").write_bytes(b"%PDF-1.4 fake content")
+
+        # Build a mock Docling document with realistic structure.
+        mock_doc = MagicMock()
+        mock_doc.export_to_markdown.return_value = "# Introduction\n\nThis is the body text."
+        mock_doc.pages = [MagicMock(), MagicMock()]  # 2 pages
+
+        # Simulate iterate_items returning a section header and a table.
+        mock_section = MagicMock()
+        mock_section.label = "section_header"
+        mock_section.text = "Introduction"
+
+        mock_table = MagicMock()
+        mock_table.label = "table"
+
+        mock_paragraph = MagicMock()
+        mock_paragraph.label = "paragraph"
+
+        # iterate_items is called twice: once for sections, once for has_tables.
+        mock_doc.iterate_items.return_value = [mock_section, mock_table, mock_paragraph]
+
+        # Wire the mock converter.
+        mock_converter = MagicMock()
+        mock_converter.convert.return_value.document = mock_doc
+        mock_build.return_value = mock_converter
+
+        # --- Execute ---
+        result = asyncio.run(backend.process(
+            {"file_ref": "report.pdf"},
             {"workspace_dir": str(workspace)},
         ))
 
+        # --- Verify result structure ---
+        assert result["model_used"] == "docling"
 
-def test_file_not_found(backend, workspace):
-    """Backend raises when source file doesn't exist."""
-    with pytest.raises(FileNotFoundError):
-        import asyncio
-        asyncio.run(backend.process(
-            {"file_ref": "nonexistent.pdf"},
+        output = result["output"]
+        assert output["file_ref"] == "report_extracted.json"
+        assert output["page_count"] == 2
+        assert output["has_tables"] is True
+        assert "Introduction" in output["sections"]
+        assert "This is the body text." in output["text_preview"]
+
+        # --- Verify the extracted JSON was written to workspace ---
+        extracted_path = workspace / "report_extracted.json"
+        assert extracted_path.exists(), "Extracted JSON file was not created"
+
+        extracted = json.loads(extracted_path.read_text())
+        assert extracted["page_count"] == 2
+        assert extracted["has_tables"] is True
+        assert "Introduction" in extracted["sections"]
+        assert "# Introduction" in extracted["text"]
+
+    @patch("docman.backends.docling_backend.DoclingBackend._build_converter")
+    def test_extraction_with_empty_document(self, mock_build, backend, workspace):
+        """A document with no text, no sections, and no tables should still succeed.
+
+        Verifies that the backend handles empty/minimal documents gracefully
+        rather than crashing on missing attributes.
+        """
+        (workspace / "empty.pdf").write_bytes(b"%PDF-1.4 empty")
+
+        mock_doc = MagicMock()
+        mock_doc.export_to_markdown.return_value = ""
+        mock_doc.pages = [MagicMock()]  # 1 page
+        mock_doc.iterate_items.return_value = []  # No items at all
+
+        mock_converter = MagicMock()
+        mock_converter.convert.return_value.document = mock_doc
+        mock_build.return_value = mock_converter
+
+        result = asyncio.run(backend.process(
+            {"file_ref": "empty.pdf"},
             {"workspace_dir": str(workspace)},
         ))
+
+        output = result["output"]
+        assert output["file_ref"] == "empty_extracted.json"
+        assert output["page_count"] == 1
+        assert output["has_tables"] is False
+        assert output["sections"] == []
+        assert output["text_preview"] == ""
+
+    @patch("docman.backends.docling_backend.DoclingBackend._build_converter")
+    def test_sections_capped_at_twenty(self, mock_build, backend, workspace):
+        """Output sections list should be capped at 20 entries even if the
+        document has more, to keep NATS messages small."""
+        (workspace / "long.pdf").write_bytes(b"%PDF-1.4 long doc")
+
+        mock_doc = MagicMock()
+        mock_doc.export_to_markdown.return_value = "text"
+        mock_doc.pages = [MagicMock()]
+
+        # Generate 30 section headers.
+        mock_items = []
+        for i in range(30):
+            item = MagicMock()
+            item.label = "section_header"
+            item.text = f"Section {i}"
+            mock_items.append(item)
+        mock_doc.iterate_items.return_value = mock_items
+
+        mock_converter = MagicMock()
+        mock_converter.convert.return_value.document = mock_doc
+        mock_build.return_value = mock_converter
+
+        result = asyncio.run(backend.process(
+            {"file_ref": "long.pdf"},
+            {"workspace_dir": str(workspace)},
+        ))
+
+        # Output should cap at 20 sections.
+        assert len(result["output"]["sections"]) == 20
+
+        # But the full JSON file should contain all 30.
+        extracted = json.loads((workspace / "long_extracted.json").read_text())
+        assert len(extracted["sections"]) == 30
+
+
+# ---------------------------------------------------------------------------
+# Error handling tests
+# ---------------------------------------------------------------------------
+
+class TestErrorHandling:
+    """Tests that verify Docling and I/O failures produce DoclingConversionError."""
+
+    @patch("docman.backends.docling_backend.DoclingBackend._build_converter")
+    def test_docling_conversion_failure_raises_conversion_error(
+        self, mock_build, backend, workspace
+    ):
+        """When Docling's converter.convert() raises, the backend should wrap
+        it in DoclingConversionError with the original exception as __cause__."""
+        (workspace / "corrupt.pdf").write_bytes(b"not a real pdf")
+
+        mock_converter = MagicMock()
+        mock_converter.convert.side_effect = RuntimeError("Corrupt PDF structure")
+        mock_build.return_value = mock_converter
+
+        with pytest.raises(DoclingConversionError, match="Docling conversion failed"):
+            asyncio.run(backend.process(
+                {"file_ref": "corrupt.pdf"},
+                {"workspace_dir": str(workspace)},
+            ))
+
+    @patch("docman.backends.docling_backend.DoclingBackend._build_converter")
+    def test_write_failure_raises_conversion_error(
+        self, mock_build, backend, workspace
+    ):
+        """When writing the extracted JSON fails (disk full, permissions),
+        the backend should wrap the OSError in DoclingConversionError."""
+        (workspace / "good.pdf").write_bytes(b"%PDF-1.4 content")
+
+        mock_doc = MagicMock()
+        mock_doc.export_to_markdown.return_value = "text"
+        mock_doc.pages = [MagicMock()]
+        mock_doc.iterate_items.return_value = []
+
+        mock_converter = MagicMock()
+        mock_converter.convert.return_value.document = mock_doc
+        mock_build.return_value = mock_converter
+
+        # Make the workspace read-only so the JSON write fails.
+        workspace.chmod(0o555)
+        try:
+            with pytest.raises(DoclingConversionError, match="Failed to write"):
+                asyncio.run(backend.process(
+                    {"file_ref": "good.pdf"},
+                    {"workspace_dir": str(workspace)},
+                ))
+        finally:
+            # Restore permissions so pytest can clean up tmp_path.
+            workspace.chmod(0o755)

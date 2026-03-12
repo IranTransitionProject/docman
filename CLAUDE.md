@@ -93,23 +93,18 @@ pytest tests/ -v
 ## Current state
 
 The following items are **implemented and working**:
-- DoclingBackend (`src/docman/backends/docling_backend.py`) — complete with path traversal validation, configurable Docling tuning via backend_config
+- DoclingBackend (`src/docman/backends/docling_backend.py`) — complete with path traversal validation, configurable Docling tuning via backend_config, proper error handling (DoclingConversionError), production-quality docstrings
 - Worker configs for all 3 stages with I/O schemas — complete
 - Pipeline config (`configs/orchestrators/doc_pipeline.yaml`) — complete
-- 2 unit tests pass (path traversal, file not found validation)
+- 7 unit tests pass (input validation, happy-path extraction, empty document, section capping, Docling failure, write failure)
 
 ## What to implement next
 
-1. **Happy-path test** — Mock DocumentConverter to test the full extraction flow without a real PDF
-2. **Summarizer file_ref resolution** — LLMWorker needs to read file_ref from workspace and inject content into the prompt
-3. **End-to-end test** — With NATS, Redis, and Ollama running locally
-4. **Error handling in DoclingBackend** — Wrap Docling calls in try/except for corrupt PDFs, unsupported formats
-5. **Remove unused imports** — `json/Path/MagicMock/patch` in test file
+1. **Summarizer file_ref resolution** — LLMWorker needs to read file_ref from workspace and inject content into the prompt
+2. **End-to-end test** — With NATS, Redis, and Ollama running locally
 
 ## Known issues
 
-- `asyncio.get_event_loop()` is deprecated — should use `asyncio.get_running_loop()` in docling_backend.py
-- `import asyncio` is inside test functions instead of at module level
 - The summarizer stage can't actually read extracted text from workspace (see Data flow section)
 
 ## Environment

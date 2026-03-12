@@ -2,10 +2,10 @@
 Docling-based document extraction backend.
 
 Wraps IBM Docling to extract text, tables, and structure from PDF/DOCX files.
-Runs synchronously in a thread pool to keep the event loop responsive.
+Runs synchronously in a thread pool to keep the async event loop responsive.
 
-This is the first stage in DocMan's pipeline:
-    doc_extractor (this) → doc_classifier → doc_summarizer
+This is the first stage in DocMan's document processing pipeline:
+    doc_extractor (this) -> doc_classifier -> doc_summarizer
 
 Input:  {"file_ref": "filename.pdf"}  (relative to workspace_dir)
 Output: {"file_ref": "filename_extracted.json", "page_count": N,
@@ -17,7 +17,7 @@ passing large text through NATS messages.
 
 Docling tuning options can be passed via backend_config in the worker YAML:
     device:            "mps" | "cpu" | "cuda" | "auto" (default: "auto")
-    num_threads:       int (default: system default)
+    num_threads:       int (default: 8 on Apple Silicon, 4 elsewhere)
     ocr_engine:        "ocrmac" | "easyocr" | "tesseract" (default: "ocrmac" on macOS)
     layout_batch_size: int (default: 4)
     ocr_batch_size:    int (default: 4)
@@ -25,49 +25,85 @@ Docling tuning options can be passed via backend_config in the worker YAML:
     do_table_structure: bool (default: true)
 
 See also:
-    configs/workers/doc_extractor.yaml — worker config with I/O schemas
-    docs/docling-setup.md — full Docling configuration and tuning guide
-    loom.worker.processor.ProcessorWorker — the worker that runs this backend
+    configs/workers/doc_extractor.yaml -- worker config with I/O schemas
+    docs/docling-setup.md -- full Docling configuration and tuning guide
+    loom.worker.processor.ProcessorWorker -- the worker that runs this backend
 """
 from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import platform
 from pathlib import Path
 from typing import Any
 
 from loom.worker.processor import ProcessingBackend
 
+logger = logging.getLogger(__name__)
+
+
+class DoclingConversionError(Exception):
+    """Raised when Docling fails to convert a document.
+
+    Wraps underlying Docling exceptions (corrupt PDFs, unsupported formats,
+    out-of-memory conditions) with a descriptive message and the original
+    cause attached via ``__cause__``.
+    """
+
 
 class DoclingBackend(ProcessingBackend):
+    """ProcessingBackend that uses IBM Docling for document extraction.
+
+    Reads a source document (PDF or DOCX) from the workspace directory,
+    runs Docling's DocumentConverter to extract text, tables, and structural
+    metadata, then writes the full extracted content as JSON back to the
+    workspace. Returns a lightweight summary (file_ref, page_count,
+    has_tables, sections, text_preview) suitable for passing through NATS
+    messages to downstream pipeline stages.
+
+    Attributes:
+        workspace_dir: Default workspace path. Can be overridden per-call
+            via the ``workspace_dir`` key in the config dict.
     """
-    ProcessingBackend that uses Docling for document extraction.
 
-    Expects payload: {"file_ref": "filename.pdf"}
-    Config must include: workspace_dir
-
-    Reads source file from workspace_dir, writes extracted JSON to workspace_dir,
-    returns file_ref to extracted output + inline metadata summary.
-    """
-
-    def __init__(self, workspace_dir: str = "/tmp/docman-workspace"):
+    def __init__(self, workspace_dir: str = "/tmp/docman-workspace") -> None:
         self.workspace_dir = Path(workspace_dir)
 
     async def process(self, payload: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
         """Extract text and structure from a document using Docling.
 
-        The config dict comes from the worker's YAML config (backend_config section).
-        It may override workspace_dir from the constructor default, and it supplies
-        Docling tuning options (device, ocr_engine, batch sizes, etc.).
+        Validates the input file_ref for path traversal and existence, then
+        offloads the CPU-intensive Docling conversion to a thread pool so
+        the async event loop stays responsive.
 
-        Returns a dict with "output" (the extraction result) and "model_used" ("docling").
-        The ProcessorWorker unpacks this and publishes the TaskResult.
+        Args:
+            payload: Must contain ``file_ref`` (str) -- the filename of the
+                source document, relative to the workspace directory.
+            config: Worker config dict (from the YAML's ``backend_config``
+                section). May include ``workspace_dir`` to override the
+                constructor default, plus Docling tuning options such as
+                ``device``, ``ocr_engine``, ``num_threads``, etc.
+
+        Returns:
+            A dict with ``"output"`` (the extraction result dict) and
+            ``"model_used"`` (always ``"docling"``). The ProcessorWorker
+            unpacks this and publishes the TaskResult to NATS.
+
+        Raises:
+            ValueError: If file_ref attempts to escape the workspace
+                directory (path traversal attack).
+            FileNotFoundError: If the source file does not exist in the
+                workspace.
+            DoclingConversionError: If Docling fails to convert the
+                document (corrupt file, unsupported format, OOM, etc.).
         """
         file_ref = payload["file_ref"]
         workspace = Path(config.get("workspace_dir", str(self.workspace_dir)))
 
-        # Validate path traversal
+        # --- Path traversal validation ---
+        # Resolve both paths to absolute form and verify the source stays
+        # within the workspace boundary. Prevents "../../../etc/passwd" attacks.
         source_path = (workspace / file_ref).resolve()
         if not str(source_path).startswith(str(workspace.resolve())):
             raise ValueError(f"Path traversal detected: {file_ref}")
@@ -75,26 +111,46 @@ class DoclingBackend(ProcessingBackend):
         if not source_path.exists():
             raise FileNotFoundError(f"Source file not found: {source_path}")
 
-        # Run Docling in thread pool (it's synchronous and CPU-intensive).
-        # FIXME: asyncio.get_event_loop() is deprecated in Python 3.10+.
-        # Use asyncio.get_running_loop() instead.
-        loop = asyncio.get_event_loop()
-        # TODO: Consider wrapping _extract() in try/except to handle Docling errors
-        # (corrupt PDFs, unsupported formats, OOM on large files) and return a
-        # structured error instead of letting the exception propagate as a raw traceback.
-        result = await loop.run_in_executor(
-            None, self._extract, source_path, workspace, config
-        )
+        # Run Docling in a thread pool -- it is synchronous and CPU-intensive,
+        # so we must not block the async event loop.
+        loop = asyncio.get_running_loop()
+        try:
+            result = await loop.run_in_executor(
+                None, self._extract, source_path, workspace, config
+            )
+        except DoclingConversionError:
+            # Already wrapped with context -- re-raise as-is.
+            raise
+        except Exception as exc:
+            # Wrap unexpected Docling/IO errors so callers get a structured
+            # error type rather than a raw traceback from deep inside Docling.
+            raise DoclingConversionError(
+                f"Failed to extract '{file_ref}': {exc}"
+            ) from exc
 
         return {"output": result, "model_used": "docling"}
 
     def _build_converter(self, config: dict[str, Any]):
-        """Build a DocumentConverter with settings from backend_config.
+        """Build a Docling DocumentConverter with settings from backend_config.
 
-        Reads tuning options from the config dict (sourced from the worker YAML's
-        backend_config section). Falls back to sensible defaults for Apple Silicon.
+        Constructs the converter with accelerator, OCR, and table structure
+        options pulled from the config dict. Falls back to sensible defaults
+        tuned for Apple Silicon (MPS device, ocrmac, 8 threads).
 
-        See docs/docling-setup.md for full configuration reference.
+        Docling imports are done lazily here to avoid pulling in torch and
+        torchvision at module import time.
+
+        Args:
+            config: Backend config dict from the worker YAML. Recognised keys:
+                ``device``, ``num_threads``, ``do_ocr``, ``ocr_engine``,
+                ``do_table_structure``, ``layout_batch_size``, ``ocr_batch_size``.
+
+        Returns:
+            A configured ``docling.document_converter.DocumentConverter``
+            instance ready to process PDF and DOCX files.
+
+        See also:
+            docs/docling-setup.md -- full Docling configuration reference.
         """
         from docling.document_converter import DocumentConverter, PdfFormatOption
         from docling.datamodel.pipeline_options import (
@@ -157,59 +213,100 @@ class DoclingBackend(ProcessingBackend):
         )
 
     def _extract(self, source_path: Path, workspace: Path, config: dict[str, Any]) -> dict[str, Any]:
-        """Synchronous Docling extraction (runs in thread pool).
+        """Run synchronous Docling extraction (called from thread pool).
 
-        Imports DocumentConverter lazily to avoid loading Docling (and its
-        heavy torch dependency) at module import time.
+        This method is intentionally synchronous because Docling's
+        DocumentConverter is CPU-bound and not async-aware. The caller
+        (``process``) schedules it via ``run_in_executor``.
+
+        Docling and its heavy dependencies (torch, torchvision) are imported
+        lazily inside ``_build_converter`` to avoid loading them at module
+        import time -- this keeps ``import docman`` fast.
 
         Args:
-            source_path: Absolute path to the source document.
-            workspace: Workspace directory for writing extracted output.
-            config: backend_config from the worker YAML (Docling tuning options).
-        """
-        converter = self._build_converter(config)
-        doc_result = converter.convert(str(source_path))
-        doc = doc_result.document
+            source_path: Absolute, resolved path to the source document.
+            workspace: Workspace directory for writing the extracted JSON.
+            config: Backend config dict from the worker YAML -- supplies
+                Docling tuning options (device, OCR engine, batch sizes).
 
-        # Extract text content
+        Returns:
+            A dict containing:
+                - ``file_ref``: Filename of the extracted JSON in workspace.
+                - ``page_count``: Number of pages detected.
+                - ``has_tables``: Whether any tables were found.
+                - ``sections``: Up to 20 section/title headers.
+                - ``text_preview``: First ~500 words for downstream preview.
+
+        Raises:
+            DoclingConversionError: If Docling conversion or the output
+                write fails (corrupt file, disk full, permissions, etc.).
+        """
+        # --- Convert document ---
+        try:
+            converter = self._build_converter(config)
+            doc_result = converter.convert(str(source_path))
+            doc = doc_result.document
+        except Exception as exc:
+            raise DoclingConversionError(
+                f"Docling conversion failed for '{source_path.name}': {exc}"
+            ) from exc
+
+        # --- Extract text content as Markdown ---
         text = doc.export_to_markdown()
 
-        # Build output
-        output_name = f"{source_path.stem}_extracted.json"
-        output_path = workspace / output_name
-
-        # Extract metadata
-        sections = []
+        # --- Gather structural metadata ---
+        # Collect section headers and titles for downstream classification.
+        sections: list[str] = []
         for item in doc.iterate_items():
             if hasattr(item, "label") and item.label in ("section_header", "title"):
                 sections.append(item.text if hasattr(item, "text") else str(item))
 
+        # Check whether the document contains any tables.
         has_tables = any(
             hasattr(item, "label") and item.label == "table"
             for item in doc.iterate_items()
         )
 
-        # Estimate page count from document
+        # Page count -- Docling exposes a .pages list on most document types.
         page_count = len(doc.pages) if hasattr(doc, "pages") else 1
 
-        # Text preview (first ~500 words)
+        # Text preview: first ~500 words, included inline in the NATS message
+        # so the classifier stage can work without reading the full JSON.
         words = text.split()
         text_preview = " ".join(words[:500])
 
-        # Write extracted content to workspace.
-        # TODO: Handle write errors (disk full, permissions) gracefully.
+        # --- Write full extracted content to workspace ---
+        output_name = f"{source_path.stem}_extracted.json"
+        output_path = workspace / output_name
+
         extracted = {
             "text": text,
             "sections": sections,
             "has_tables": has_tables,
             "page_count": page_count,
         }
-        output_path.write_text(json.dumps(extracted, indent=2))
+        try:
+            output_path.write_text(json.dumps(extracted, indent=2))
+        except OSError as exc:
+            raise DoclingConversionError(
+                f"Failed to write extracted output to '{output_path}': {exc}"
+            ) from exc
+
+        logger.info(
+            "docling.extraction_complete",
+            extra={
+                "source": source_path.name,
+                "output": output_name,
+                "page_count": page_count,
+                "has_tables": has_tables,
+                "section_count": len(sections),
+            },
+        )
 
         return {
             "file_ref": output_name,
             "page_count": page_count,
             "has_tables": has_tables,
-            "sections": sections[:20],  # Cap at 20 section headers
+            "sections": sections[:20],  # Cap at 20 to keep NATS messages small.
             "text_preview": text_preview,
         }
