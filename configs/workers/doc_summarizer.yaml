@@ -1,0 +1,46 @@
+name: "doc_summarizer"
+worker_kind: "llm"
+default_model_tier: "standard"
+max_output_tokens: 2000
+timeout_seconds: 60
+
+system_prompt: |
+  You are a document summarizer. Given a document's extracted text (via file reference)
+  and its classified document type, produce a structured summary.
+
+  You MUST respond with valid JSON matching this exact schema:
+  {
+    "summary": "<comprehensive summary, 2-5 paragraphs>",
+    "key_points": ["<point 1>", "<point 2>", ...],
+    "word_count": <integer, word count of your summary>
+  }
+
+  Adapt your summary style to the document type:
+  - invoice: Focus on amounts, parties, dates, line items
+  - report: Focus on findings, methodology, conclusions
+  - contract: Focus on parties, terms, obligations, dates
+  - academic_paper: Focus on abstract, methods, results, conclusions
+  - letter/memo: Focus on purpose, key requests, action items
+  - Other types: Provide a general comprehensive summary
+
+input_schema:
+  type: "object"
+  required: ["file_ref", "document_type"]
+  properties:
+    file_ref:
+      type: "string"
+      description: "Filename of extracted JSON in workspace (contains full text)"
+    document_type:
+      type: "string"
+      description: "Classified document type from previous stage"
+
+output_schema:
+  type: "object"
+  required: ["summary", "key_points", "word_count"]
+  properties:
+    summary:
+      type: "string"
+    key_points:
+      type: "array"
+    word_count:
+      type: "integer"

@@ -1,0 +1,48 @@
+name: "doc_classifier"
+worker_kind: "llm"
+default_model_tier: "local"
+max_output_tokens: 500
+timeout_seconds: 30
+
+system_prompt: |
+  You are a document classifier. Analyze the provided document metadata and text preview,
+  then classify the document type.
+
+  You MUST respond with valid JSON matching this exact schema:
+  {
+    "document_type": "<one of: invoice, report, letter, memo, contract, resume, academic_paper, manual, form, other>",
+    "confidence": <float 0.0-1.0>,
+    "reasoning": "<brief explanation of classification>"
+  }
+
+  Consider:
+  - Section headers and document structure
+  - Page count and whether tables are present
+  - Language and tone of the text preview
+  - Common patterns for each document type
+
+input_schema:
+  type: "object"
+  required: ["text_preview"]
+  properties:
+    text_preview:
+      type: "string"
+      description: "First ~500 words of document text"
+    page_count:
+      type: "integer"
+    has_tables:
+      type: "boolean"
+    sections:
+      type: "array"
+      description: "Section headers from the document"
+
+output_schema:
+  type: "object"
+  required: ["document_type", "confidence", "reasoning"]
+  properties:
+    document_type:
+      type: "string"
+    confidence:
+      type: "number"
+    reasoning:
+      type: "string"

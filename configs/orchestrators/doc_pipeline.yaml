@@ -1,0 +1,25 @@
+name: "doc_pipeline"
+timeout_seconds: 300
+
+pipeline_stages:
+  - name: "extract"
+    worker_type: "doc_extractor"
+    tier: "local"
+    input_mapping:
+      file_ref: "goal.context.file_ref"
+
+  - name: "classify"
+    worker_type: "doc_classifier"
+    tier: "local"
+    input_mapping:
+      text_preview: "extract.output.text_preview"
+      page_count: "extract.output.page_count"
+      has_tables: "extract.output.has_tables"
+      sections: "extract.output.sections"
+
+  - name: "summarize"
+    worker_type: "doc_summarizer"
+    tier: "standard"
+    input_mapping:
+      file_ref: "extract.output.file_ref"
+      document_type: "classify.output.document_type"

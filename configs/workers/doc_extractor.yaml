@@ -1,0 +1,34 @@
+name: "doc_extractor"
+worker_kind: "processor"
+processing_backend: "docman.backends.docling_backend.DoclingBackend"
+backend_config:
+  workspace_dir: "/tmp/docman-workspace"
+
+default_model_tier: "local"
+timeout_seconds: 120
+
+input_schema:
+  type: "object"
+  required: ["file_ref"]
+  properties:
+    file_ref:
+      type: "string"
+      description: "Filename relative to workspace directory"
+
+output_schema:
+  type: "object"
+  required: ["file_ref", "page_count", "has_tables", "sections", "text_preview"]
+  properties:
+    file_ref:
+      type: "string"
+      description: "Filename of extracted JSON in workspace"
+    page_count:
+      type: "integer"
+    has_tables:
+      type: "boolean"
+    sections:
+      type: "array"
+      description: "Section headers found in document (max 20)"
+    text_preview:
+      type: "string"
+      description: "First ~500 words of extracted text"
