@@ -4,9 +4,8 @@ version = "0.1.0"
 description = "Document processing pipeline — Loom framework test project"
 requires-python = ">=3.11"
 dependencies = [
-    "loom",                        # Loom framework
+    "loom[duckdb]",                # Loom framework + DuckDB contrib
     "docling>=2.0.0",              # Document extraction (PDF, DOCX, etc.)
-    "duckdb>=1.0.0",               # Embedded analytics database
 ]
 
 [project.optional-dependencies]

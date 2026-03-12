@@ -1,4 +1,8 @@
-"""Tests for DuckDBVectorTool — semantic similarity search."""
+"""Tests for Docman's DuckDBVectorTool wrapper — verifies Docman-specific defaults.
+
+Core search/similarity logic is tested in LOOM (tests/test_contrib_duckdb_vector.py).
+This file only tests that the Docman wrapper sets the correct defaults.
+"""
 import json
 
 import duckdb
@@ -26,73 +30,46 @@ def db_with_embeddings(tmp_path):
         )
     """)
 
-    # Insert docs with 4-dimensional embeddings.
-    # Vectors chosen so that "climate" docs cluster together.
     conn.execute("""
         INSERT INTO documents VALUES
         ('d1', 'climate.pdf', 'report', 'Climate change analysis', 10, false,
          [0.9, 0.1, 0.0, 0.0], CURRENT_TIMESTAMP),
-        ('d2', 'weather.pdf', 'report', 'Weather patterns study', 5, false,
-         [0.8, 0.2, 0.1, 0.0], CURRENT_TIMESTAMP),
-        ('d3', 'budget.pdf', 'financial', 'Annual budget report', 20, true,
-         [0.0, 0.0, 0.9, 0.1], CURRENT_TIMESTAMP),
-        ('d4', 'noembedding.pdf', 'memo', 'No embedding doc', 1, false,
-         NULL, CURRENT_TIMESTAMP)
+        ('d2', 'budget.pdf', 'financial', 'Annual budget report', 20, true,
+         [0.0, 0.0, 0.9, 0.1], CURRENT_TIMESTAMP)
     """)
 
     conn.close()
     return db_path
 
 
-class TestDuckDBVectorToolDefinition:
-    """Tests for tool definition generation."""
+class TestDocmanDefaults:
+    """Tests that Docman wrapper provides correct defaults."""
 
-    def test_tool_name(self, db_with_embeddings):
+    def test_tool_name_is_find_similar_documents(self, db_with_embeddings):
         tool = DuckDBVectorTool(db_path=db_with_embeddings)
         defn = tool.get_definition()
         assert defn["name"] == "find_similar_documents"
 
-    def test_has_query_parameter(self, db_with_embeddings):
+    def test_default_description(self, db_with_embeddings):
         tool = DuckDBVectorTool(db_path=db_with_embeddings)
         defn = tool.get_definition()
-        assert "query" in defn["parameters"]["properties"]
-        assert "query" in defn["parameters"]["required"]
+        assert defn["description"] == "Find semantically similar documents"
 
-    def test_has_limit_parameter(self, db_with_embeddings):
-        tool = DuckDBVectorTool(db_path=db_with_embeddings)
-        defn = tool.get_definition()
-        assert "limit" in defn["parameters"]["properties"]
-
-    def test_custom_description(self, db_with_embeddings):
-        tool = DuckDBVectorTool(
-            db_path=db_with_embeddings,
-            description="Custom search desc",
-        )
-        defn = tool.get_definition()
-        assert defn["description"] == "Custom search desc"
-
-
-class TestDuckDBVectorToolSearch:
-    """Tests for similarity search execution."""
-
-    def test_search_returns_results(self, db_with_embeddings, monkeypatch):
-        """Search returns similar documents ranked by cosine similarity."""
+    def test_uses_documents_table(self, db_with_embeddings, monkeypatch):
+        """Verify the tool queries the 'documents' table."""
         tool = DuckDBVectorTool(db_path=db_with_embeddings)
 
-        # Mock the embedding call to return a climate-like vector
         def fake_embed_query(self_tool, text):
             return [0.85, 0.15, 0.0, 0.0]
 
         monkeypatch.setattr(DuckDBVectorTool, "_embed_query", fake_embed_query)
 
-        result = json.loads(tool.execute_sync({"query": "climate data"}))
-        assert "results" in result
+        result = json.loads(tool.execute_sync({"query": "climate"}))
         assert len(result["results"]) > 0
-        # Climate doc should be most similar
         assert result["results"][0]["source_file"] == "climate.pdf"
 
-    def test_excludes_null_embeddings(self, db_with_embeddings, monkeypatch):
-        """Documents without embeddings are excluded from results."""
+    def test_returns_docman_columns(self, db_with_embeddings, monkeypatch):
+        """Verify result columns match the Docman schema."""
         tool = DuckDBVectorTool(db_path=db_with_embeddings)
 
         def fake_embed_query(self_tool, text):
@@ -100,76 +77,13 @@ class TestDuckDBVectorToolSearch:
 
         monkeypatch.setattr(DuckDBVectorTool, "_embed_query", fake_embed_query)
 
-        result = json.loads(tool.execute_sync({"query": "anything"}))
-        source_files = [r["source_file"] for r in result["results"]]
-        assert "noembedding.pdf" not in source_files
-
-    def test_respects_limit(self, db_with_embeddings, monkeypatch):
-        """Limit parameter caps the number of results."""
-        tool = DuckDBVectorTool(db_path=db_with_embeddings)
-
-        def fake_embed_query(self_tool, text):
-            return [0.5, 0.5, 0.5, 0.5]
-
-        monkeypatch.setattr(DuckDBVectorTool, "_embed_query", fake_embed_query)
-
-        result = json.loads(tool.execute_sync({"query": "test", "limit": 1}))
-        assert len(result["results"]) == 1
-
-    def test_max_results_enforcement(self, db_with_embeddings, monkeypatch):
-        """Limit is capped at max_results."""
-        tool = DuckDBVectorTool(db_path=db_with_embeddings, max_results=2)
-
-        def fake_embed_query(self_tool, text):
-            return [0.5, 0.5, 0.5, 0.5]
-
-        monkeypatch.setattr(DuckDBVectorTool, "_embed_query", fake_embed_query)
-
-        result = json.loads(tool.execute_sync({"query": "test", "limit": 100}))
-        assert len(result["results"]) <= 2
-
-    def test_empty_query(self, db_with_embeddings):
-        """Empty query returns empty results without calling Ollama."""
-        tool = DuckDBVectorTool(db_path=db_with_embeddings)
-        result = json.loads(tool.execute_sync({"query": ""}))
-        assert result["results"] == []
-        assert result["total"] == 0
-
-    def test_similarity_scores_included(self, db_with_embeddings, monkeypatch):
-        """Results include similarity scores."""
-        tool = DuckDBVectorTool(db_path=db_with_embeddings)
-
-        def fake_embed_query(self_tool, text):
-            return [0.9, 0.1, 0.0, 0.0]
-
-        monkeypatch.setattr(DuckDBVectorTool, "_embed_query", fake_embed_query)
-
-        result = json.loads(tool.execute_sync({"query": "climate"}))
+        result = json.loads(tool.execute_sync({"query": "test"}))
         for r in result["results"]:
+            assert "source_file" in r
+            assert "document_type" in r
+            assert "summary" in r
             assert "similarity" in r
-            assert isinstance(r["similarity"], (int, float))
 
-    def test_embed_failure_returns_error(self, db_with_embeddings, monkeypatch):
-        """Failed embedding returns an error dict."""
-        tool = DuckDBVectorTool(db_path=db_with_embeddings)
-
-        def fail_embed(self_tool, text):
-            return None
-
-        monkeypatch.setattr(DuckDBVectorTool, "_embed_query", fail_embed)
-
-        result = json.loads(tool.execute_sync({"query": "anything"}))
-        assert "error" in result
-
-
-class TestDuckDBVectorToolQueryBackend:
-    """Tests for vector_search action in DuckDBQueryBackend."""
-
-    def test_vector_search_action_registered(self):
-        """vector_search is a valid action in the query backend."""
-        from docman.backends.duckdb_query import DuckDBQueryBackend
-
-        backend = DuckDBQueryBackend()
-        # The handlers dict is built in process_sync, so check indirectly
-        # by verifying the method exists
-        assert hasattr(backend, "_vector_search")
+    def test_is_subclass_of_loom_vector_tool(self):
+        from loom.contrib.duckdb import DuckDBVectorTool as LoomVectorTool
+        assert issubclass(DuckDBVectorTool, LoomVectorTool)

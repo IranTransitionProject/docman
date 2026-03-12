@@ -13,10 +13,9 @@ src/docman/
   backends/
     docling_backend.py   # DoclingBackend — PDF/DOCX extraction via Docling
     duckdb_ingest.py     # DuckDBIngestBackend — document persistence to DuckDB (with optional embeddings)
-    duckdb_query.py      # DuckDBQueryBackend — search, filter, stats, retrieval, vector_search
+    duckdb_query.py      # DocmanQueryBackend — thin subclass of loom.contrib.duckdb.DuckDBQueryBackend with Docman schema defaults
   tools/
-    duckdb_view.py       # DuckDBViewTool — expose DuckDB views as LLM-callable tools
-    vector_search.py     # DuckDBVectorTool — semantic similarity search tool
+    vector_search.py     # DuckDBVectorTool — thin wrapper around loom.contrib.duckdb.DuckDBVectorTool with Docman defaults
 configs/
   workers/        # YAML configs for doc_extractor, doc_classifier, doc_summarizer, doc_ingest, doc_query
   orchestrators/  # Pipeline config (doc_pipeline.yaml)
@@ -27,8 +26,11 @@ tests/            # Unit tests (mock backends, in-memory DuckDB, no infrastructu
 
 ## Relationship to Loom
 
-Docman depends on `loom` as a package. It uses:
-- `ProcessingBackend` ABC — DoclingBackend, DuckDBIngestBackend, DuckDBQueryBackend implement this
+Docman depends on `loom[duckdb]` as a package. It uses:
+- `ProcessingBackend` ABC — DoclingBackend, DuckDBIngestBackend implement this directly
+- `loom.contrib.duckdb.DuckDBQueryBackend` — DocmanQueryBackend subclasses this with Docman-specific schema defaults
+- `loom.contrib.duckdb.DuckDBVectorTool` — DuckDBVectorTool wraps this with Docman-specific column/table defaults
+- `loom.contrib.duckdb.DuckDBViewTool` — used directly (no Docman wrapper needed, already generic)
 - `ProcessorWorker` — runs DoclingBackend and DuckDB backends via `loom processor` CLI
 - `LLMWorker` — runs classifier and summarizer via `loom worker` CLI
 - `PipelineOrchestrator` — orchestrates the 4-stage pipeline via `loom pipeline` CLI
@@ -116,12 +118,11 @@ pytest tests/ -v
 The following items are **implemented and working**:
 - DoclingBackend (`src/docman/backends/docling_backend.py`) — complete with path traversal validation, configurable Docling tuning via backend_config, proper error handling (DoclingConversionError), production-quality docstrings
 - DuckDBIngestBackend (`src/docman/backends/duckdb_ingest.py`) — persists pipeline results to DuckDB with auto-schema creation, full-text storage from workspace, FTS index, optional vector embedding generation via Ollama
-- DuckDBQueryBackend (`src/docman/backends/duckdb_query.py`) — structured query interface with search (FTS), filter, stats, get, and vector_search actions
-- DuckDBViewTool (`src/docman/tools/duckdb_view.py`) — Loom ToolProvider that exposes DuckDB views as LLM-callable tools
-- DuckDBVectorTool (`src/docman/tools/vector_search.py`) — Loom ToolProvider for semantic similarity search using `list_cosine_similarity`
+- DocmanQueryBackend (`src/docman/backends/duckdb_query.py`) — thin subclass of `loom.contrib.duckdb.DuckDBQueryBackend` with Docman document schema defaults (columns, filters, stats aggregates). Backward-compat alias `DuckDBQueryBackend = DocmanQueryBackend` for existing YAML configs.
+- DuckDBVectorTool (`src/docman/tools/vector_search.py`) — thin wrapper around `loom.contrib.duckdb.DuckDBVectorTool` with Docman-specific table, columns, and tool name defaults
 - Worker configs for all 4 pipeline stages + standalone query worker with I/O schemas — complete
 - Pipeline configs (`configs/orchestrators/doc_pipeline.yaml`, `doc_pipeline_local.yaml`) — 4-stage pipeline complete
-- Unit tests: 73 tests pass (DoclingBackend, DuckDB ingest/query, view tool, vector search, embeddings)
+- Unit tests: 40 tests pass (DoclingBackend, DuckDB ingest, query wrapper defaults, vector search wrapper defaults). Core DuckDB logic (64 tests) now tested in LOOM.
 
 ## What to implement next
 

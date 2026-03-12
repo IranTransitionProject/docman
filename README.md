@@ -13,21 +13,22 @@ A test project that evaluates Loom's actor-based architecture with a real-world 
 | 3. Summarize | LLMWorker | — | LLM produces structured summary based on document type |
 | 4. Ingest | ProcessorWorker | DuckDBIngestBackend | Persists metadata, classification, summary, full text, and optional vector embeddings to DuckDB |
 
-**Standalone:** `doc_query` (DuckDBQueryBackend) — search (FTS), filter, stats, get, and vector_search actions against the DuckDB database.
+**Standalone:** `doc_query` (DocmanQueryBackend) — search (FTS), filter, stats, get, and vector_search actions against the DuckDB database.
 
-## LLM tools
+## DuckDB tools
 
-Docman also provides Loom `SyncToolProvider` implementations for LLM function-calling:
+Docman provides thin wrappers around `loom.contrib.duckdb` with document-specific defaults:
 
-- **DuckDBViewTool** — exposes DuckDB views (e.g., `document_summaries`) as LLM-callable query tools
-- **DuckDBVectorTool** — semantic similarity search using `list_cosine_similarity` over stored embeddings
+- **DocmanQueryBackend** — subclass of `loom.contrib.duckdb.DuckDBQueryBackend` with Docman schema (columns, filters, stats aggregates)
+- **DuckDBVectorTool** — wrapper around `loom.contrib.duckdb.DuckDBVectorTool` with document table/column defaults
+- **DuckDBViewTool** — used directly from `loom.contrib.duckdb` (no Docman wrapper needed)
 
 ## Quick start
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pytest tests/ -v   # 73 tests, no infrastructure needed
+pytest tests/ -v   # 40 tests, no infrastructure needed
 ```
 
 ## Setup guides
