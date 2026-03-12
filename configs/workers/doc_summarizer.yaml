@@ -1,3 +1,18 @@
+# Document summarizer — stage 3 of the doc_pipeline.
+# LLM worker that produces a structured summary based on document type.
+# Receives file_ref (extracted JSON in workspace) and document_type from classifier.
+#
+# Run with:  loom worker --config configs/workers/doc_summarizer.yaml --tier standard \
+#                        --nats-url nats://localhost:4222
+# Subscribes to: loom.tasks.doc_summarizer.standard
+# Requires:  ANTHROPIC_API_KEY env var (standard tier uses Claude Sonnet)
+#
+# TODO: The summarizer receives a file_ref but the LLMWorker doesn't currently
+#       read files from workspace. The worker would need to either:
+#       1. Be enhanced to resolve file_refs and inject file content into the prompt
+#       2. Have the pipeline pass the text inline (but this may exceed NATS message limits)
+#       This is a known gap in the current implementation.
+
 name: "doc_summarizer"
 worker_kind: "llm"
 default_model_tier: "standard"

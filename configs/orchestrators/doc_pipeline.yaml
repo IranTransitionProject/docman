@@ -1,5 +1,20 @@
+# DocMan 3-stage document processing pipeline.
+# Run with:  loom pipeline --config configs/orchestrators/doc_pipeline.yaml \
+#                          --nats-url nats://localhost:4222
+# Submit:    loom submit "Process document" --context file_ref=report.pdf
+#
+# Data flow:
+#   1. extract:   DoclingBackend reads PDF/DOCX → writes extracted JSON to workspace
+#   2. classify:  LLM classifies document type from text_preview + metadata
+#   3. summarize: LLM summarizes based on document_type and extracted text
+#
+# Input mappings use dot-notation paths into the pipeline context:
+#   "goal.context.file_ref" → the file_ref from the submitted goal
+#   "extract.output.text_preview" → text_preview from the extractor's output
+#   "classify.output.document_type" → document_type from the classifier's output
+
 name: "doc_pipeline"
-timeout_seconds: 300
+timeout_seconds: 300          # Per-stage timeout (can be overridden per stage)
 
 pipeline_stages:
   - name: "extract"
