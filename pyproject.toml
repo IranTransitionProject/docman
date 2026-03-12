@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "loom",                        # Loom framework
     "docling>=2.0.0",              # Document extraction (PDF, DOCX, etc.)
+    "duckdb>=1.0.0",               # Embedded analytics database
 ]
 
 [project.optional-dependencies]

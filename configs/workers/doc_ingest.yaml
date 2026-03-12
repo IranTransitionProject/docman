@@ -1,0 +1,75 @@
+# Document ingest — stage 4 of the doc_pipeline.
+# This is a PROCESSOR worker (not LLM). It runs DuckDBIngestBackend to persist
+# document metadata, classification, summary, and full extracted text into DuckDB.
+#
+# Run with:  loom processor --config configs/workers/doc_ingest.yaml \
+#                           --nats-url nats://localhost:4222
+# Subscribes to: loom.tasks.doc_ingest.local
+#
+# NOTE: The docman package must be installed for the processing_backend
+#       class path to resolve. Install with: pip install -e /path/to/docman
+
+name: "doc_ingest"
+worker_kind: "processor"
+processing_backend: "docman.backends.duckdb_ingest.DuckDBIngestBackend"
+backend_config:
+  db_path: "/tmp/docman-workspace/docman.duckdb"
+  workspace_dir: "/tmp/docman-workspace"
+  # Optional: generate vector embeddings during ingestion.
+  # Requires Ollama running with the specified model pulled.
+  # embedding:
+  #   model: "nomic-embed-text"
+  #   ollama_url: "http://localhost:11434"
+
+default_model_tier: "local"
+timeout_seconds: 30
+
+input_schema:
+  type: "object"
+  required: ["source_file"]
+  properties:
+    source_file:
+      type: "string"
+      description: "Original filename of the source document"
+    file_ref:
+      type: "string"
+      description: "Filename of extracted JSON in workspace (from extractor)"
+    page_count:
+      type: "integer"
+    has_tables:
+      type: "boolean"
+    sections:
+      type: "array"
+      description: "Section headers found in document"
+    text_preview:
+      type: "string"
+      description: "First ~500 words of extracted text"
+    document_type:
+      type: "string"
+      description: "Classification result (from classifier)"
+    classification_confidence:
+      type: "number"
+    classification_reasoning:
+      type: "string"
+    summary:
+      type: "string"
+      description: "Document summary (from summarizer)"
+    key_points:
+      type: "array"
+      description: "Key points extracted by summarizer"
+    word_count:
+      type: "integer"
+
+output_schema:
+  type: "object"
+  required: ["document_id", "status", "source_file"]
+  properties:
+    document_id:
+      type: "string"
+      description: "UUID assigned to the ingested document"
+    status:
+      type: "string"
+      description: "Ingestion status (inserted)"
+    source_file:
+      type: "string"
+      description: "Original filename echoed back"

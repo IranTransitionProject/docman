@@ -1,4 +1,4 @@
-# DocMan 3-stage pipeline — LOCAL ONLY (no Anthropic API required).
+# DocMan 4-stage pipeline — LOCAL ONLY (no Anthropic API required).
 # All stages use the "local" tier via Ollama.
 #
 # Run with:  loom pipeline --config configs/orchestrators/doc_pipeline_local.yaml \
@@ -31,3 +31,20 @@ pipeline_stages:
     input_mapping:
       file_ref: "extract.output.file_ref"
       document_type: "classify.output.document_type"
+
+  - name: "ingest"
+    worker_type: "doc_ingest"
+    tier: "local"
+    input_mapping:
+      source_file: "goal.context.file_ref"
+      file_ref: "extract.output.file_ref"
+      page_count: "extract.output.page_count"
+      has_tables: "extract.output.has_tables"
+      sections: "extract.output.sections"
+      text_preview: "extract.output.text_preview"
+      document_type: "classify.output.document_type"
+      classification_confidence: "classify.output.confidence"
+      classification_reasoning: "classify.output.reasoning"
+      summary: "summarize.output.summary"
+      key_points: "summarize.output.key_points"
+      word_count: "summarize.output.word_count"

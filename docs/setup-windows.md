@@ -333,7 +333,7 @@ Copy-Item "$HOME\Downloads\your-document.pdf" C:\temp\docman-workspace\
 .\scripts\dev-start.ps1
 ```
 
-This starts all five pipeline components in the background: router, extractor, classifier, summarizer, and pipeline orchestrator.
+This starts the pipeline components in the background: router, extractor, classifier, summarizer, ingest, and pipeline orchestrator.
 
 ### 13d: Submit a test document
 
@@ -492,7 +492,7 @@ You submit a document (PDF/DOCX)
         |
         v
 +---------------+     NATS message bus
-|   Pipeline    |<--------------------->  Coordinates the 3 stages
+|   Pipeline    |<--------------------->  Coordinates the 4 stages
 | Orchestrator  |
 +-------+-------+
         | Stage 1: extract
@@ -512,6 +512,12 @@ You submit a document (PDF/DOCX)
 +---------------+
 |  Summarizer   |  LLM (Ollama) produces structured summary
 | (LLM Worker)  |  Returns: summary, key_points, word_count
++-------+-------+
+        | Stage 4: ingest
+        v
++---------------+
+|    Ingest     |  DuckDBIngestBackend persists all results to DuckDB
+|  (Processor)  |  Returns: document_id, status
 +---------------+
 ```
 

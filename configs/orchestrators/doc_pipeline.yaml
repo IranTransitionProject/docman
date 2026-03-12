@@ -1,4 +1,4 @@
-# DocMan 3-stage document processing pipeline.
+# DocMan 4-stage document processing pipeline.
 # Run with:  loom pipeline --config configs/orchestrators/doc_pipeline.yaml \
 #                          --nats-url nats://localhost:4222
 # Submit:    loom submit "Process document" --context file_ref=report.pdf
@@ -7,6 +7,7 @@
 #   1. extract:   DoclingBackend reads PDF/DOCX → writes extracted JSON to workspace
 #   2. classify:  LLM classifies document type from text_preview + metadata
 #   3. summarize: LLM summarizes based on document_type and extracted text
+#   4. ingest:    DuckDB stores all results (metadata, classification, summary, full text)
 #
 # Input mappings use dot-notation paths into the pipeline context:
 #   "goal.context.file_ref" → the file_ref from the submitted goal
@@ -38,3 +39,20 @@ pipeline_stages:
     input_mapping:
       file_ref: "extract.output.file_ref"
       document_type: "classify.output.document_type"
+
+  - name: "ingest"
+    worker_type: "doc_ingest"
+    tier: "local"
+    input_mapping:
+      source_file: "goal.context.file_ref"
+      file_ref: "extract.output.file_ref"
+      page_count: "extract.output.page_count"
+      has_tables: "extract.output.has_tables"
+      sections: "extract.output.sections"
+      text_preview: "extract.output.text_preview"
+      document_type: "classify.output.document_type"
+      classification_confidence: "classify.output.confidence"
+      classification_reasoning: "classify.output.reasoning"
+      summary: "summarize.output.summary"
+      key_points: "summarize.output.key_points"
+      word_count: "summarize.output.word_count"
