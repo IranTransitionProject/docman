@@ -6,18 +6,19 @@
 #                        --nats-url nats://localhost:4222
 # Subscribes to: loom.tasks.doc_summarizer.standard
 # Requires:  ANTHROPIC_API_KEY env var (standard tier uses Claude Sonnet)
-#
-# TODO: The summarizer receives a file_ref but the LLMWorker doesn't currently
-#       read files from workspace. The worker would need to either:
-#       1. Be enhanced to resolve file_refs and inject file content into the prompt
-#       2. Have the pipeline pass the text inline (but this may exceed NATS message limits)
-#       This is a known gap in the current implementation.
 
 name: "doc_summarizer"
 worker_kind: "llm"
 default_model_tier: "standard"
 max_output_tokens: 2000
 timeout_seconds: 60
+
+# File-ref resolution: LLMWorker reads the extracted JSON from workspace
+# and injects its content into the payload as "file_ref_content" before
+# building the LLM prompt. This bridges the file-ref pattern used by
+# the extractor stage with the LLM's need for inline text.
+workspace_dir: "/tmp/docman-workspace"
+resolve_file_refs: ["file_ref"]
 
 system_prompt: |
   You are a document summarizer. Given a document's extracted text (via file reference)

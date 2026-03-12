@@ -2,7 +2,8 @@
 Docling-based document extraction backend.
 
 Wraps IBM Docling to extract text, tables, and structure from PDF/DOCX files.
-Runs synchronously in a thread pool to keep the async event loop responsive.
+Extends SyncProcessingBackend so the synchronous Docling work is automatically
+offloaded to a thread pool, keeping the async event loop responsive.
 
 This is the first stage in DocMan's document processing pipeline:
     doc_extractor (this) -> doc_classifier -> doc_summarizer
@@ -27,23 +28,24 @@ Docling tuning options can be passed via backend_config in the worker YAML:
 See also:
     configs/workers/doc_extractor.yaml -- worker config with I/O schemas
     docs/docling-setup.md -- full Docling configuration and tuning guide
-    loom.worker.processor.ProcessorWorker -- the worker that runs this backend
+    loom.worker.processor.SyncProcessingBackend -- base class for sync backends
+    loom.core.workspace.WorkspaceManager -- file-ref resolution with path safety
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import platform
 from pathlib import Path
 from typing import Any
 
-from loom.worker.processor import ProcessingBackend
+from loom.core.workspace import WorkspaceManager
+from loom.worker.processor import BackendError, SyncProcessingBackend
 
 logger = logging.getLogger(__name__)
 
 
-class DoclingConversionError(Exception):
+class DoclingConversionError(BackendError):
     """Raised when Docling fails to convert a document.
 
     Wraps underlying Docling exceptions (corrupt PDFs, unsupported formats,
@@ -52,8 +54,8 @@ class DoclingConversionError(Exception):
     """
 
 
-class DoclingBackend(ProcessingBackend):
-    """ProcessingBackend that uses IBM Docling for document extraction.
+class DoclingBackend(SyncProcessingBackend):
+    """SyncProcessingBackend that uses IBM Docling for document extraction.
 
     Reads a source document (PDF or DOCX) from the workspace directory,
     runs Docling's DocumentConverter to extract text, tables, and structural
@@ -61,6 +63,10 @@ class DoclingBackend(ProcessingBackend):
     workspace. Returns a lightweight summary (file_ref, page_count,
     has_tables, sections, text_preview) suitable for passing through NATS
     messages to downstream pipeline stages.
+
+    Because Docling is synchronous and CPU-bound, this backend extends
+    SyncProcessingBackend which automatically offloads process_sync()
+    to a thread pool via run_in_executor.
 
     Attributes:
         workspace_dir: Default workspace path. Can be overridden per-call
@@ -70,12 +76,12 @@ class DoclingBackend(ProcessingBackend):
     def __init__(self, workspace_dir: str = "/tmp/docman-workspace") -> None:
         self.workspace_dir = Path(workspace_dir)
 
-    async def process(self, payload: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    def process_sync(self, payload: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
         """Extract text and structure from a document using Docling.
 
         Validates the input file_ref for path traversal and existence, then
-        offloads the CPU-intensive Docling conversion to a thread pool so
-        the async event loop stays responsive.
+        runs Docling's DocumentConverter synchronously (the parent class
+        handles thread pool offloading).
 
         Args:
             payload: Must contain ``file_ref`` (str) -- the filename of the
@@ -99,31 +105,17 @@ class DoclingBackend(ProcessingBackend):
                 document (corrupt file, unsupported format, OOM, etc.).
         """
         file_ref = payload["file_ref"]
-        workspace = Path(config.get("workspace_dir", str(self.workspace_dir)))
+        ws_dir = config.get("workspace_dir", str(self.workspace_dir))
+        ws = WorkspaceManager(ws_dir)
 
-        # --- Path traversal validation ---
-        # Resolve both paths to absolute form and verify the source stays
-        # within the workspace boundary. Prevents "../../../etc/passwd" attacks.
-        source_path = (workspace / file_ref).resolve()
-        if not str(source_path).startswith(str(workspace.resolve())):
-            raise ValueError(f"Path traversal detected: {file_ref}")
+        # Validate path traversal and existence via WorkspaceManager.
+        source_path = ws.resolve(file_ref)
 
-        if not source_path.exists():
-            raise FileNotFoundError(f"Source file not found: {source_path}")
-
-        # Run Docling in a thread pool -- it is synchronous and CPU-intensive,
-        # so we must not block the async event loop.
-        loop = asyncio.get_running_loop()
         try:
-            result = await loop.run_in_executor(
-                None, self._extract, source_path, workspace, config
-            )
+            result = self._extract(source_path, ws, config)
         except DoclingConversionError:
-            # Already wrapped with context -- re-raise as-is.
             raise
         except Exception as exc:
-            # Wrap unexpected Docling/IO errors so callers get a structured
-            # error type rather than a raw traceback from deep inside Docling.
             raise DoclingConversionError(
                 f"Failed to extract '{file_ref}': {exc}"
             ) from exc
@@ -212,12 +204,8 @@ class DoclingBackend(ProcessingBackend):
             },
         )
 
-    def _extract(self, source_path: Path, workspace: Path, config: dict[str, Any]) -> dict[str, Any]:
-        """Run synchronous Docling extraction (called from thread pool).
-
-        This method is intentionally synchronous because Docling's
-        DocumentConverter is CPU-bound and not async-aware. The caller
-        (``process``) schedules it via ``run_in_executor``.
+    def _extract(self, source_path: Path, ws: WorkspaceManager, config: dict[str, Any]) -> dict[str, Any]:
+        """Run synchronous Docling extraction.
 
         Docling and its heavy dependencies (torch, torchvision) are imported
         lazily inside ``_build_converter`` to avoid loading them at module
@@ -225,7 +213,7 @@ class DoclingBackend(ProcessingBackend):
 
         Args:
             source_path: Absolute, resolved path to the source document.
-            workspace: Workspace directory for writing the extracted JSON.
+            ws: WorkspaceManager for writing the extracted JSON.
             config: Backend config dict from the worker YAML -- supplies
                 Docling tuning options (device, OCR engine, batch sizes).
 
@@ -277,7 +265,6 @@ class DoclingBackend(ProcessingBackend):
 
         # --- Write full extracted content to workspace ---
         output_name = f"{source_path.stem}_extracted.json"
-        output_path = workspace / output_name
 
         extracted = {
             "text": text,
@@ -286,10 +273,10 @@ class DoclingBackend(ProcessingBackend):
             "page_count": page_count,
         }
         try:
-            output_path.write_text(json.dumps(extracted, indent=2))
+            ws.write_json(output_name, extracted)
         except OSError as exc:
             raise DoclingConversionError(
-                f"Failed to write extracted output to '{output_path}': {exc}"
+                f"Failed to write extracted output to '{output_name}': {exc}"
             ) from exc
 
         logger.info(

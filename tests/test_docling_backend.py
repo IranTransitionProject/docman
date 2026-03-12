@@ -9,16 +9,17 @@ Covers three areas:
     3. Error handling -- verifies that Docling failures and I/O errors are
        wrapped in DoclingConversionError with the original cause preserved.
 
-All tests run with ``asyncio.run()`` to exercise the real async path
-(``asyncio.get_running_loop()`` + ``run_in_executor``).
+DoclingBackend extends SyncProcessingBackend, so process_sync() is tested
+directly (no asyncio needed for unit tests). The thread-pool offloading
+is tested via SyncProcessingBackend's own tests in Loom.
 """
-import asyncio
 import json
 
 import pytest
 from unittest.mock import MagicMock, patch
 
 from docman.backends.docling_backend import DoclingBackend, DoclingConversionError
+from loom.worker.processor import BackendError
 
 
 # ---------------------------------------------------------------------------
@@ -47,18 +48,22 @@ class TestInputValidation:
     def test_path_traversal_rejected(self, backend, workspace):
         """file_ref containing '../' that escapes workspace must raise ValueError."""
         with pytest.raises(ValueError, match="Path traversal"):
-            asyncio.run(backend.process(
+            backend.process_sync(
                 {"file_ref": "../../etc/passwd"},
                 {"workspace_dir": str(workspace)},
-            ))
+            )
 
     def test_file_not_found(self, backend, workspace):
         """file_ref pointing to a non-existent file must raise FileNotFoundError."""
         with pytest.raises(FileNotFoundError):
-            asyncio.run(backend.process(
+            backend.process_sync(
                 {"file_ref": "nonexistent.pdf"},
                 {"workspace_dir": str(workspace)},
-            ))
+            )
+
+    def test_docling_conversion_error_is_backend_error(self):
+        """DoclingConversionError should be a subclass of BackendError."""
+        assert issubclass(DoclingConversionError, BackendError)
 
 
 # ---------------------------------------------------------------------------
@@ -106,10 +111,10 @@ class TestExtraction:
         mock_build.return_value = mock_converter
 
         # --- Execute ---
-        result = asyncio.run(backend.process(
+        result = backend.process_sync(
             {"file_ref": "report.pdf"},
             {"workspace_dir": str(workspace)},
-        ))
+        )
 
         # --- Verify result structure ---
         assert result["model_used"] == "docling"
@@ -149,10 +154,10 @@ class TestExtraction:
         mock_converter.convert.return_value.document = mock_doc
         mock_build.return_value = mock_converter
 
-        result = asyncio.run(backend.process(
+        result = backend.process_sync(
             {"file_ref": "empty.pdf"},
             {"workspace_dir": str(workspace)},
-        ))
+        )
 
         output = result["output"]
         assert output["file_ref"] == "empty_extracted.json"
@@ -184,10 +189,10 @@ class TestExtraction:
         mock_converter.convert.return_value.document = mock_doc
         mock_build.return_value = mock_converter
 
-        result = asyncio.run(backend.process(
+        result = backend.process_sync(
             {"file_ref": "long.pdf"},
             {"workspace_dir": str(workspace)},
-        ))
+        )
 
         # Output should cap at 20 sections.
         assert len(result["output"]["sections"]) == 20
@@ -217,10 +222,10 @@ class TestErrorHandling:
         mock_build.return_value = mock_converter
 
         with pytest.raises(DoclingConversionError, match="Docling conversion failed"):
-            asyncio.run(backend.process(
+            backend.process_sync(
                 {"file_ref": "corrupt.pdf"},
                 {"workspace_dir": str(workspace)},
-            ))
+            )
 
     @patch("docman.backends.docling_backend.DoclingBackend._build_converter")
     def test_write_failure_raises_conversion_error(
@@ -243,10 +248,10 @@ class TestErrorHandling:
         workspace.chmod(0o555)
         try:
             with pytest.raises(DoclingConversionError, match="Failed to write"):
-                asyncio.run(backend.process(
+                backend.process_sync(
                     {"file_ref": "good.pdf"},
                     {"workspace_dir": str(workspace)},
-                ))
+                )
         finally:
             # Restore permissions so pytest can clean up tmp_path.
             workspace.chmod(0o755)
