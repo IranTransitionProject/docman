@@ -1,0 +1,47 @@
+# Document extractor — Windows variant.
+# Uses CPU device and EasyOCR instead of MPS/ocrmac (macOS-only).
+#
+# Run with:  loom processor --config configs/workers/doc_extractor_windows.yaml ^
+#                           --nats-url nats://localhost:4222
+
+name: "doc_extractor"
+worker_kind: "processor"
+processing_backend: "docman.backends.docling_backend.DoclingBackend"
+backend_config:
+  workspace_dir: "C:/temp/docman-workspace"
+  device: "cpu"                # "cpu" for all Windows machines; "cuda" if you have an NVIDIA GPU
+  num_threads: 4               # Adjust to your CPU core count
+  ocr_engine: "easyocr"        # EasyOCR works cross-platform (ocrmac is macOS-only)
+  do_ocr: true
+  do_table_structure: true
+  layout_batch_size: 2         # Conservative for typical Windows laptops
+  ocr_batch_size: 2
+
+default_model_tier: "local"
+timeout_seconds: 180           # Longer timeout for CPU-only inference
+
+input_schema:
+  type: "object"
+  required: ["file_ref"]
+  properties:
+    file_ref:
+      type: "string"
+      description: "Filename relative to workspace directory"
+
+output_schema:
+  type: "object"
+  required: ["file_ref", "page_count", "has_tables", "sections", "text_preview"]
+  properties:
+    file_ref:
+      type: "string"
+      description: "Filename of extracted JSON in workspace"
+    page_count:
+      type: "integer"
+    has_tables:
+      type: "boolean"
+    sections:
+      type: "array"
+      description: "Section headers found in document (max 20)"
+    text_preview:
+      type: "string"
+      description: "First ~500 words of extracted text"
