@@ -33,7 +33,6 @@ See also:
 """
 from __future__ import annotations
 
-import json
 import logging
 import platform
 from pathlib import Path

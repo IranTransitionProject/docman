@@ -133,7 +133,7 @@ class TestDocmanDefaults:
         assert result["output"]["results"][0]["source_file"] == "report.pdf"
 
     def test_stats_by_document_type(self, backend, config, populated_db):
-        result = backend.process_sync({"action": "stats"}, config)
+        result = backend.process_sync({"action": "stats", "group_by": "document_type"}, config)
         output = result["output"]
         assert output["total"] == 2
         type_counts = {r["document_type"]: r["doc_count"] for r in output["results"]}
