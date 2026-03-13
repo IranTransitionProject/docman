@@ -1,5 +1,9 @@
 # Docman — Document Processing Pipeline
 
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![Status: Active Development](https://img.shields.io/badge/status-active_development-brightgreen.svg)]()
+
 **PDF/DOCX extraction, LLM classification and summarization, DuckDB persistence — built on the [Loom](https://github.com/IranTransitionProject/loom) framework.**
 
 ---
