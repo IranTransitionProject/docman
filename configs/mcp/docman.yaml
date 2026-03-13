@@ -1,0 +1,33 @@
+# Docman MCP server — exposes the document pipeline and query backend as MCP tools.
+#
+# Run with:
+#   loom mcp --config configs/mcp/docman.yaml
+#   loom mcp --config configs/mcp/docman.yaml --transport streamable-http --port 8000
+#
+# Requires:
+#   pip install loom[mcp,duckdb]
+#   NATS running at nats://localhost:4222
+#   Docman workers started (doc_extractor, doc_classifier, doc_summarizer, doc_ingest)
+#
+# The docman package must be installed: pip install -e /path/to/docman
+
+name: "docman"
+description: "Document processing — extract, classify, summarize, ingest, and query documents"
+nats_url: "nats://localhost:4222"
+
+tools:
+  pipelines:
+    - config: "configs/orchestrators/doc_pipeline.yaml"
+      name: "process_document"
+      description: "Process a document through the full pipeline: extract, classify, summarize, and ingest"
+
+  queries:
+    - backend: "docman.backends.duckdb_query.DocmanQueryBackend"
+      actions: ["search", "filter", "stats", "get"]
+      name_prefix: "docman"
+      backend_config:
+        db_path: "/tmp/docman-workspace/docman.duckdb"
+
+resources:
+  workspace_dir: "/tmp/docman-workspace"
+  patterns: ["*.pdf", "*.docx", "*.json"]

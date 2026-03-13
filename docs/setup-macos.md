@@ -228,7 +228,7 @@ Verify installation:
 loom --help
 ```
 
-You should see a list of Loom commands: `worker`, `processor`, `pipeline`, `router`, `submit`.
+You should see a list of Loom commands: `worker`, `processor`, `pipeline`, `orchestrator`, `scheduler`, `router`, `submit`, `mcp`.
 
 ---
 

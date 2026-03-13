@@ -41,6 +41,9 @@ configs/
 ├── orchestrators/
 │   ├── doc_pipeline.yaml           # Full pipeline (mixed tiers)
 │   └── doc_pipeline_local.yaml     # Full pipeline (local tier only)
+│
+└── mcp/
+    └── docman.yaml                 # MCP gateway config (exposes pipeline + queries as tools)
 
 docs/
 ├── ARCHITECTURE.md         # This file
@@ -87,7 +90,7 @@ PDF/DOCX → [Extract] → [Classify] → [Summarize] → [Ingest] → DuckDB
 - **Type:** LLMWorker (standard or local tier)
 - **What it does:** LLM produces structured summary adapted to document type
 - **Output:** Summary (2-5 paragraphs), key points, word count
-- **Known gap:** File-ref resolution from workspace not yet wired in LLMWorker
+- **Config pending:** Loom's `resolve_file_refs` now supports file-ref resolution; needs wiring in config
 
 ### Stage 4: Ingest (`doc_ingest`)
 
@@ -140,7 +143,7 @@ carry only `file_ref` strings, not inline content.
 2. DoclingBackend reads source, writes extracted JSON to workspace
 3. Extractor returns `file_ref` pointing to extracted JSON + inline `text_preview`
 4. Classifier uses inline `text_preview` (no file access needed)
-5. Summarizer receives `file_ref` (resolution pending — known gap)
+5. Summarizer receives `file_ref` (Loom's `resolve_file_refs` can resolve this; config not yet wired)
 6. Ingest backend reads full text from workspace JSON, persists to DuckDB
 
 ---
@@ -186,11 +189,37 @@ Docman depends on `loom[duckdb]` as a package and uses these Loom components:
 | `LLMWorker` | Runs classification and summarization stages |
 | `PipelineOrchestrator` | Orchestrates 4-stage pipeline |
 | `WorkspaceManager` | File-ref resolution with path traversal protection |
+| `MCPGateway` | Exposes Docman as MCP server via `configs/mcp/docman.yaml` |
 
 The CLI loads backends by fully qualified class path from worker configs:
 ```yaml
 processing_backend: "docman.backends.docling_backend.DoclingBackend"
 ```
+
+---
+
+## MCP Gateway
+
+Docman can be exposed as an MCP (Model Context Protocol) server using Loom's
+built-in MCP gateway. A single YAML config maps Docman's pipeline and query
+backend to MCP tools — no MCP-specific code needed.
+
+```bash
+loom mcp --config configs/mcp/docman.yaml
+```
+
+The gateway auto-discovers tools from the config:
+
+| MCP Tool | Source |
+|----------|--------|
+| `process_document` | Pipeline: extract → classify → summarize → ingest |
+| `docman_search` | DocmanQueryBackend `search` action (FTS) |
+| `docman_filter` | DocmanQueryBackend `filter` action |
+| `docman_stats` | DocmanQueryBackend `stats` action |
+| `docman_get` | DocmanQueryBackend `get` action |
+
+Workspace files (PDFs, extracted JSON) are exposed as MCP resources with
+`workspace:///` URIs.
 
 ---
 

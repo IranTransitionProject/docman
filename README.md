@@ -26,6 +26,9 @@ four stages:
 A standalone `doc_query` worker provides full-text search, filtering, statistics,
 and semantic vector search against the DuckDB database.
 
+The entire system can be exposed as an **MCP (Model Context Protocol) server**
+using Loom's built-in MCP gateway — a single YAML config, zero MCP-specific code.
+
 ---
 
 ## Who This Is For
@@ -51,8 +54,9 @@ to study or fork.
 | DuckDBVectorTool (semantic similarity search) | Complete |
 | Worker configs (5 workers) | Complete |
 | Pipeline configs (standard + local tier) | Complete |
+| MCP gateway config | Complete |
 | Unit tests | 40 passing |
-| Summarizer file-ref resolution | Known gap |
+| Summarizer file-ref resolution | Config pending (Loom support exists) |
 
 ---
 

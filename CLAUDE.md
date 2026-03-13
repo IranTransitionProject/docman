@@ -18,9 +18,14 @@ src/docman/
     vector_search.py     # DuckDBVectorTool — thin wrapper around loom.contrib.duckdb.DuckDBVectorTool with Docman defaults
 configs/
   workers/        # YAML configs for doc_extractor, doc_classifier, doc_summarizer, doc_ingest, doc_query
-  orchestrators/  # Pipeline config (doc_pipeline.yaml)
+  orchestrators/  # Pipeline config (doc_pipeline.yaml, doc_pipeline_local.yaml)
+  mcp/            # MCP gateway config (docman.yaml)
 docs/
-  docling-setup.md  # Docling installation, configuration, and performance tuning guide
+  ARCHITECTURE.md   # System architecture overview
+  CONTRIBUTING.md   # Contribution standards and CLA
+  setup-macos.md    # Full macOS environment setup
+  setup-windows.md  # Full Windows environment setup
+  docling-setup.md  # Docling configuration and performance tuning
 tests/            # Unit tests (mock backends, in-memory DuckDB, no infrastructure)
 ```
 
@@ -56,7 +61,7 @@ processing_backend: "docman.backends.docling_backend.DoclingBackend"
 - Large data passes via **file references** in a shared workspace directory (`--workspace-dir`)
 - Messages carry only file_ref strings, not inline content
 - DoclingBackend reads source file from workspace, writes extracted JSON to workspace
-- **Known gap:** The doc_summarizer receives a file_ref but LLMWorker doesn't currently resolve file_refs from workspace. The summarizer would need custom logic to read the extracted JSON and inject it into the LLM prompt. This is documented as a TODO in the summarizer config.
+- **Summarizer file resolution:** Loom's LLMWorker now supports `resolve_file_refs` — adding `resolve_file_refs: ["file_ref"]` and `workspace_dir` to the summarizer config would allow it to read extracted text from workspace automatically. This is not yet wired in the current config but the Loom capability exists.
 
 ## Docling configuration
 
@@ -70,6 +75,25 @@ DoclingBackend reads tuning options from the `backend_config` section of `doc_ex
 Pre-download detection models: `docling-tools models download`
 
 Full guide: `docs/docling-setup.md`
+
+## MCP gateway
+
+Docman can be exposed as an MCP (Model Context Protocol) server using Loom's built-in MCP gateway — zero MCP-specific code needed.
+
+```bash
+# Start Docman as an MCP server (requires loom[mcp] and NATS + workers running)
+loom mcp --config configs/mcp/docman.yaml
+
+# Or with streamable-http transport
+loom mcp --config configs/mcp/docman.yaml --transport streamable-http --port 8000
+```
+
+The MCP config (`configs/mcp/docman.yaml`) maps Docman's workers and query backend to MCP tools:
+- Pipeline → `process_document` tool (full extract → classify → summarize → ingest)
+- Query backend → `docman_search`, `docman_filter`, `docman_stats`, `docman_get` tools
+- Workspace files exposed as MCP resources
+
+See Loom's [Building Workflows](https://github.com/IranTransitionProject/loom/blob/main/docs/building-workflows.md) Part 11 for full MCP gateway documentation.
 
 ## Key design rules
 
@@ -126,12 +150,12 @@ The following items are **implemented and working**:
 
 ## What to implement next
 
-1. **Summarizer file_ref resolution** — LLMWorker needs to read file_ref from workspace and inject content into the prompt
+1. **Wire summarizer file_ref resolution** — Add `resolve_file_refs: ["file_ref"]` and `workspace_dir` to `doc_summarizer.yaml` (Loom now supports this natively)
 2. **End-to-end test** — With NATS, Redis, and Ollama running locally
 
 ## Known issues
 
-- The summarizer stage can't actually read extracted text from workspace (see Data flow section)
+- The summarizer config doesn't yet use Loom's `resolve_file_refs` to read extracted text from workspace (see Data flow section). The Loom capability exists; it just needs to be wired in the config.
 
 ## Environment
 

@@ -62,7 +62,8 @@ and mocked backends for testing.
 - New processing backends (additional document formats, extraction engines)
 - Pipeline stage improvements (better classification, multi-language support)
 - Integration tests with NATS infrastructure
-- Summarizer file-ref resolution (current known gap)
+- Wire `resolve_file_refs` in summarizer config (Loom support exists, needs config update)
+- MCP gateway examples and transport extensions
 - Documentation improvements and examples
 - Bug reports with reproducible steps
 
