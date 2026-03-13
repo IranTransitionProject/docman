@@ -12,3 +12,6 @@ build/
 .ruff_cache/
 .claude/
 /tmp/
+.coverage
+coverage.xml
+htmlcov/
