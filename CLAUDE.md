@@ -38,7 +38,7 @@ Docman depends on `loom[duckdb]` as a package. It uses:
 - `loom.contrib.duckdb.DuckDBViewTool` — used directly (no Docman wrapper needed, already generic)
 - `ProcessorWorker` — runs DoclingBackend and DuckDB backends via `loom processor` CLI
 - `LLMWorker` — runs classifier and summarizer via `loom worker` CLI
-- `PipelineOrchestrator` — orchestrates the 4-stage pipeline via `loom pipeline` CLI
+- `PipelineOrchestrator` — orchestrates the 4-stage pipeline via `loom pipeline` CLI (now with dependency-aware parallel stage execution)
 
 The CLI loads backends by fully qualified class path from worker configs:
 ```yaml
@@ -51,6 +51,16 @@ processing_backend: "docman.backends.docling_backend.DoclingBackend"
 2. **doc_classifier** (LLMWorker) — LLM classifies document type from text_preview + metadata. Returns document_type, confidence, reasoning.
 3. **doc_summarizer** (LLMWorker) — LLM summarizes based on document type and extracted content. Returns summary, key_points, word_count.
 4. **doc_ingest** (ProcessorWorker + DuckDBIngestBackend) — Persists all pipeline results (metadata, classification, summary, full text) into DuckDB. Reads full extracted text from workspace JSON. Returns document_id.
+
+**Pipeline execution order:** Loom's `PipelineOrchestrator` now auto-infers dependencies from `input_mapping` paths and runs independent stages concurrently. Docman's pipeline has genuinely sequential dependencies (classify depends on extract, summarize depends on both, ingest depends on all three), so it produces 4 levels of 1 stage each — identical sequential execution to before. No config changes were needed.
+
+**Scaling note:** To process multiple documents concurrently, run multiple pipeline orchestrator instances. NATS queue groups automatically load-balance across replicas:
+```bash
+# Process 3 documents concurrently — each instance handles one goal
+loom pipeline --config configs/orchestrators/doc_pipeline.yaml &
+loom pipeline --config configs/orchestrators/doc_pipeline.yaml &
+loom pipeline --config configs/orchestrators/doc_pipeline.yaml &
+```
 
 ## Standalone workers
 
@@ -152,6 +162,8 @@ The following items are **implemented and working**:
 
 1. **Wire summarizer file_ref resolution** — Add `resolve_file_refs: ["file_ref"]` and `workspace_dir` to `doc_summarizer.yaml` (Loom now supports this natively)
 2. **End-to-end test** — With NATS, Redis, and Ollama running locally
+3. **Design a parallel pipeline variant** — Current pipeline is inherently sequential, but a variant could run classify and summarize concurrently if the summarizer doesn't need `document_type` (Loom's pipeline parallelism would auto-detect this from input_mapping)
+4. **MCP progress notifications** — When Loom's MCP bridge wires progress callbacks to MCP progress tokens, Docman's pipeline would automatically report per-stage progress to MCP clients
 
 ## Known issues
 

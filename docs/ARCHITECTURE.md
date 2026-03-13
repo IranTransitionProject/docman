@@ -63,11 +63,18 @@ tests/                      # 40 unit tests (no infrastructure needed)
 
 ## Pipeline Stages
 
-The pipeline processes documents through four sequential stages:
+The pipeline processes documents through four stages. Loom's `PipelineOrchestrator`
+auto-infers dependencies from `input_mapping` paths and runs independent stages
+concurrently. In Docman's case, each stage depends on the previous one, so
+execution remains sequential:
 
 ```
 PDF/DOCX → [Extract] → [Classify] → [Summarize] → [Ingest] → DuckDB
+           Level 0      Level 1      Level 2       Level 3
 ```
+
+To process multiple documents concurrently, run multiple pipeline instances —
+NATS queue groups handle load balancing automatically.
 
 ### Stage 1: Extract (`doc_extractor`)
 
@@ -187,7 +194,7 @@ Docman depends on `loom[duckdb]` as a package and uses these Loom components:
 | `DuckDBViewTool` | Used directly (no wrapper) |
 | `ProcessorWorker` | Runs extraction and ingestion stages |
 | `LLMWorker` | Runs classification and summarization stages |
-| `PipelineOrchestrator` | Orchestrates 4-stage pipeline |
+| `PipelineOrchestrator` | Orchestrates 4-stage pipeline (dependency-aware parallelism) |
 | `WorkspaceManager` | File-ref resolution with path traversal protection |
 | `MCPGateway` | Exposes Docman as MCP server via `configs/mcp/docman.yaml` |
 
