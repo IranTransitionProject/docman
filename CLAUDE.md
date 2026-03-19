@@ -154,7 +154,7 @@ The following items are **implemented and working**:
 - DuckDBVectorTool (`src/docman/tools/vector_search.py`) — thin wrapper around `loom.contrib.duckdb.DuckDBVectorTool` with Docman-specific table, columns, and tool name defaults
 - Worker configs for all 4 pipeline stages + standalone query worker with I/O schemas — complete
 - Pipeline configs (`configs/orchestrators/doc_pipeline.yaml`, `doc_pipeline_local.yaml`) — 4-stage pipeline complete
-- Unit tests: 40 tests pass (DoclingBackend, DuckDB ingest, query wrapper defaults, vector search wrapper defaults). Core DuckDB logic (64 tests) now tested in LOOM.
+- Unit tests: 63 tests pass (DoclingBackend, DuckDB ingest, query wrapper defaults, vector search wrapper defaults, converter branch coverage, embedding truncation/error handling). Core DuckDB logic (64 tests) now tested in LOOM.
 
 ## What to implement next
 
