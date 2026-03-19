@@ -7,11 +7,11 @@ Configuration guide for IBM Docling in the DocMan pipeline, tuned for Apple Sili
 Docling is installed as a dependency of DocMan:
 
 ```bash
-# From the project root (with venv activated)
-pip install -e ".[dev]"
+# From the project root
+uv sync --extra dev
 
 # Or install Docling standalone
-pip install "docling>=2.0.0"
+uv pip install "docling>=2.0.0"
 ```
 
 This pulls in PyTorch, torchvision, and Docling's model dependencies. On Apple Silicon, PyTorch automatically includes MPS (Metal Performance Shaders) support.
@@ -84,7 +84,7 @@ Docling supports MLX-optimized models that run natively on Apple Silicon without
 MLX models require the `mlx` package:
 
 ```bash
-pip install mlx mlx-lm
+uv pip install mlx mlx-lm
 ```
 
 **Note:** MLX models are for the VLM pipeline (`VlmPipelineOptions`), not the standard PDF pipeline. They replace the traditional layout detection + OCR approach with a single vision-language model. This is experimental and may not match the accuracy of the standard pipeline for all document types.
@@ -234,7 +234,7 @@ for result in results:
 ```python
 import torch
 print(torch.backends.mps.is_available())
-# If False, check PyTorch version: pip install --upgrade torch
+# If False, check PyTorch version: uv pip install --upgrade torch
 ```
 
 **Model download failures:**
