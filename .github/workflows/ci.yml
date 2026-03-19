@@ -9,12 +9,25 @@ on:
 permissions:
   contents: read
 
+# CI checks out loom to ./loom, but pyproject.toml [tool.uv.sources] points
+# to ../loom (for local dev). We use UV_NO_SOURCES to skip that override in CI
+# and install loom explicitly via uv pip install.
+env:
+  UV_NO_SOURCES: "1"
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout loom
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/loom
+          path: loom
       - uses: astral-sh/setup-uv@v5
+      - run: uv pip install -e "./loom[duckdb]"
+      - run: uv sync --extra dev
       - run: uv run ruff check src/
 
   test:
@@ -26,7 +39,6 @@ jobs:
       - uses: actions/checkout@v4
 
       # Docman depends on loom — check it out and install from source.
-      # Adjust the repository path if your GitHub org/user differs.
       - name: Checkout loom
         uses: actions/checkout@v4
         with:
@@ -37,13 +49,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # CI checks out loom to ./loom (not ../loom as in local dev),
-      # so install loom explicitly first, then sync docman deps.
       - name: Install loom
         run: uv pip install -e "./loom[duckdb]"
 
       - name: Install docman
-        run: uv sync --extra dev --no-sources
+        run: uv sync --extra dev
 
       - name: Run tests with coverage
         run: |
