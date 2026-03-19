@@ -9,12 +9,6 @@ on:
 permissions:
   contents: read
 
-# CI checks out loom to ./loom, but pyproject.toml [tool.uv.sources] points
-# to ../loom (for local dev). We use UV_NO_SOURCES to skip that override in CI
-# and install loom explicitly via uv pip install.
-env:
-  UV_NO_SOURCES: "1"
-
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -26,7 +20,8 @@ jobs:
           repository: ${{ github.repository_owner }}/loom
           path: loom
       - uses: astral-sh/setup-uv@v5
-      - run: uv pip install -e "./loom[duckdb]"
+      # Symlink so [tool.uv.sources] path "../loom" resolves in CI
+      - run: ln -s "$GITHUB_WORKSPACE/loom" "$GITHUB_WORKSPACE/../loom"
       - run: uv sync --extra dev
       - run: uv run ruff check src/
 
@@ -49,10 +44,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install loom
-        run: uv pip install -e "./loom[duckdb]"
+      # Symlink so [tool.uv.sources] path "../loom" resolves in CI
+      - run: ln -s "$GITHUB_WORKSPACE/loom" "$GITHUB_WORKSPACE/../loom"
 
-      - name: Install docman
+      - name: Install dependencies
         run: uv sync --extra dev
 
       - name: Run tests with coverage
