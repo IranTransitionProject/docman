@@ -25,12 +25,13 @@ Docling tuning options can be passed via backend_config in the worker YAML:
     do_ocr:            bool (default: true)
     do_table_structure: bool (default: true)
 
-See also:
+See Also:
     configs/workers/doc_extractor.yaml -- worker config with I/O schemas
     docs/docling-setup.md -- full Docling configuration and tuning guide
     loom.worker.processor.SyncProcessingBackend -- base class for sync backends
     loom.core.workspace.WorkspaceManager -- file-ref resolution with path safety
 """
+
 from __future__ import annotations
 
 import logging
@@ -115,13 +116,11 @@ class DoclingBackend(SyncProcessingBackend):
         except DoclingConversionError:
             raise
         except Exception as exc:
-            raise DoclingConversionError(
-                f"Failed to extract '{file_ref}': {exc}"
-            ) from exc
+            raise DoclingConversionError(f"Failed to extract '{file_ref}': {exc}") from exc
 
         return {"output": result, "model_used": "docling"}
 
-    def _build_converter(self, config: dict[str, Any]):
+    def _build_converter(self, config: dict[str, Any]) -> Any:
         """Build a Docling DocumentConverter with settings from backend_config.
 
         Constructs the converter with accelerator, OCR, and table structure
@@ -140,16 +139,16 @@ class DoclingBackend(SyncProcessingBackend):
             A configured ``docling.document_converter.DocumentConverter``
             instance ready to process PDF and DOCX files.
 
-        See also:
+        See Also:
             docs/docling-setup.md -- full Docling configuration reference.
         """
-        from docling.document_converter import DocumentConverter, PdfFormatOption
+        from docling.datamodel.base_models import InputFormat
         from docling.datamodel.pipeline_options import (
-            PdfPipelineOptions,
             AcceleratorOptions,
+            PdfPipelineOptions,
             TableStructureOptions,
         )
-        from docling.datamodel.base_models import InputFormat
+        from docling.document_converter import DocumentConverter, PdfFormatOption
 
         # --- Accelerator options ---
         device = config.get("device", "auto")
@@ -164,15 +163,20 @@ class DoclingBackend(SyncProcessingBackend):
         do_ocr = config.get("do_ocr", True)
         ocr_options = None
         if do_ocr:
-            ocr_engine = config.get("ocr_engine", "ocrmac" if platform.system() == "Darwin" else "easyocr")
+            ocr_engine = config.get(
+                "ocr_engine", "ocrmac" if platform.system() == "Darwin" else "easyocr"
+            )
             if ocr_engine == "ocrmac":
                 from docling.datamodel.pipeline_options import OcrMacOptions
+
                 ocr_options = OcrMacOptions(recognition="accurate")
             elif ocr_engine == "easyocr":
                 from docling.datamodel.pipeline_options import EasyOcrOptions
+
                 ocr_options = EasyOcrOptions()
             elif ocr_engine == "tesseract":
                 from docling.datamodel.pipeline_options import TesseractOcrOptions
+
                 ocr_options = TesseractOcrOptions()
 
         # --- Table structure ---
@@ -203,7 +207,9 @@ class DoclingBackend(SyncProcessingBackend):
             },
         )
 
-    def _extract(self, source_path: Path, ws: WorkspaceManager, config: dict[str, Any]) -> dict[str, Any]:
+    def _extract(
+        self, source_path: Path, ws: WorkspaceManager, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Run synchronous Docling extraction.
 
         Docling and its heavy dependencies (torch, torchvision) are imported
@@ -243,15 +249,15 @@ class DoclingBackend(SyncProcessingBackend):
 
         # --- Gather structural metadata ---
         # Collect section headers and titles for downstream classification.
-        sections: list[str] = []
-        for item in doc.iterate_items():
-            if hasattr(item, "label") and item.label in ("section_header", "title"):
-                sections.append(item.text if hasattr(item, "text") else str(item))
+        sections: list[str] = [
+            item.text if hasattr(item, "text") else str(item)
+            for item in doc.iterate_items()
+            if hasattr(item, "label") and item.label in ("section_header", "title")
+        ]
 
         # Check whether the document contains any tables.
         has_tables = any(
-            hasattr(item, "label") and item.label == "table"
-            for item in doc.iterate_items()
+            hasattr(item, "label") and item.label == "table" for item in doc.iterate_items()
         )
 
         # Page count -- Docling exposes a .pages list on most document types.

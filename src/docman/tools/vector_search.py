@@ -14,14 +14,20 @@ Example knowledge_silos config::
           db_path: "/tmp/docman-workspace/docman.duckdb"
           description: "Find documents semantically similar to a query"
 """
+
 from __future__ import annotations
 
 from loom.contrib.duckdb import DuckDBVectorTool as _BaseDuckDBVectorTool
 
 # Docman-specific columns returned in search results.
 _DOCMAN_RESULT_COLUMNS = [
-    "id", "source_file", "document_type", "summary",
-    "page_count", "has_tables", "ingested_at",
+    "id",
+    "source_file",
+    "document_type",
+    "summary",
+    "page_count",
+    "has_tables",
+    "ingested_at",
 ]
 
 

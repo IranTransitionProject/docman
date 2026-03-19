@@ -40,5 +40,36 @@ exclude_lines = [
     "raise NotImplementedError",
 ]
 
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "F", "E", "W", "I", "N", "UP", "B", "A", "C4", "SIM",
+    "TC", "RUF", "D", "ANN", "PT", "RET", "ARG", "PL",
+    "PERF", "LOG", "T20",
+]
+ignore = [
+    "D100", "D104", "D203", "D212", "D105", "D107",
+    "ANN401", "ARG002", "PLR0913", "PLR2004",
+    "B008", "PLC0415",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "ANN", "ARG", "T20", "PLR", "SIM105", "PT011", "B007", "RUF059", "RUF012", "PERF102", "RET504", "N806"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["docman"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

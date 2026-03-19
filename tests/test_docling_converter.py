@@ -13,20 +13,21 @@ Covers the converter construction logic:
 All Docling imports are mocked -- tests verify that _build_converter calls
 the right constructors with the right arguments, without importing torch.
 """
+
 from __future__ import annotations
 
 import sys
 from types import ModuleType
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from docman.backends.docling_backend import DoclingBackend
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_modules():
     """Create mock Docling modules so _build_converter's lazy imports succeed.
@@ -106,6 +107,7 @@ def docling_mocks(monkeypatch):
 # Default configuration tests
 # ---------------------------------------------------------------------------
 
+
 class TestDefaultConfig:
     """Tests for _build_converter with default/empty config."""
 
@@ -137,9 +139,7 @@ class TestDefaultConfig:
 
         backend._build_converter({})
 
-        docling_mocks["AcceleratorOptions"].assert_called_once_with(
-            device="auto", num_threads=8
-        )
+        docling_mocks["AcceleratorOptions"].assert_called_once_with(device="auto", num_threads=8)
 
     def test_default_threads_x86(self, backend, docling_mocks, monkeypatch):
         """On x86_64, default num_threads should be 4."""
@@ -148,26 +148,27 @@ class TestDefaultConfig:
 
         backend._build_converter({})
 
-        docling_mocks["AcceleratorOptions"].assert_called_once_with(
-            device="auto", num_threads=4
-        )
+        docling_mocks["AcceleratorOptions"].assert_called_once_with(device="auto", num_threads=4)
 
     def test_empty_config_uses_defaults(self, backend, docling_mocks, monkeypatch):
         """An empty config dict should produce a valid converter with defaults."""
         monkeypatch.setattr("platform.system", lambda: "Darwin")
         monkeypatch.setattr("platform.machine", lambda: "arm64")
 
-        result = backend._build_converter({})
+        backend._build_converter({})
 
         # DocumentConverter should be called once with allowed_formats and format_options.
         docling_mocks["DocumentConverter"].assert_called_once()
         call_kwargs = docling_mocks["DocumentConverter"].call_args
-        assert "PDF" in call_kwargs.kwargs.get("allowed_formats", call_kwargs[1].get("allowed_formats", []))
+        assert "PDF" in call_kwargs.kwargs.get(
+            "allowed_formats", call_kwargs[1].get("allowed_formats", [])
+        )
 
 
 # ---------------------------------------------------------------------------
 # Explicit OCR engine tests
 # ---------------------------------------------------------------------------
+
 
 class TestOcrEngineSelection:
     """Tests for explicit ocr_engine configuration."""
@@ -215,6 +216,7 @@ class TestOcrEngineSelection:
 # Table structure tests
 # ---------------------------------------------------------------------------
 
+
 class TestTableStructure:
     """Tests for do_table_structure configuration."""
 
@@ -247,6 +249,7 @@ class TestTableStructure:
 # Device and batch size tests
 # ---------------------------------------------------------------------------
 
+
 class TestDeviceAndBatchConfig:
     """Tests for device, num_threads, and batch size pass-through."""
 
@@ -257,9 +260,7 @@ class TestDeviceAndBatchConfig:
 
         backend._build_converter({"device": "mps"})
 
-        docling_mocks["AcceleratorOptions"].assert_called_once_with(
-            device="mps", num_threads=8
-        )
+        docling_mocks["AcceleratorOptions"].assert_called_once_with(device="mps", num_threads=8)
 
     def test_device_cpu(self, backend, docling_mocks, monkeypatch):
         """device='cpu' should be passed through to AcceleratorOptions."""
@@ -268,9 +269,7 @@ class TestDeviceAndBatchConfig:
 
         backend._build_converter({"device": "cpu"})
 
-        docling_mocks["AcceleratorOptions"].assert_called_once_with(
-            device="cpu", num_threads=4
-        )
+        docling_mocks["AcceleratorOptions"].assert_called_once_with(device="cpu", num_threads=4)
 
     def test_custom_num_threads(self, backend, docling_mocks, monkeypatch):
         """Explicit num_threads overrides the platform default."""
@@ -279,9 +278,7 @@ class TestDeviceAndBatchConfig:
 
         backend._build_converter({"num_threads": 16})
 
-        docling_mocks["AcceleratorOptions"].assert_called_once_with(
-            device="auto", num_threads=16
-        )
+        docling_mocks["AcceleratorOptions"].assert_called_once_with(device="auto", num_threads=16)
 
     def test_batch_sizes_passed_through(self, backend, docling_mocks, monkeypatch):
         """layout_batch_size and ocr_batch_size should be passed to pipeline options."""

@@ -8,14 +8,14 @@ backward-compat alias works.
 
 Uses DuckDBIngestBackend to populate the database with the real Docman schema.
 """
+
 import json
 
-import duckdb
 import pytest
-
-from docman.backends.duckdb_query import DuckDBQueryBackend, DocmanQueryBackend, DuckDBQueryError
-from docman.backends.duckdb_ingest import DuckDBIngestBackend
 from loom.worker.processor import BackendError
+
+from docman.backends.duckdb_ingest import DuckDBIngestBackend
+from docman.backends.duckdb_query import DocmanQueryBackend, DuckDBQueryBackend, DuckDBQueryError
 
 
 @pytest.fixture
@@ -105,6 +105,7 @@ class TestBackwardCompat:
 
     def test_is_subclass_of_loom_backend(self):
         from loom.contrib.duckdb import DuckDBQueryBackend as LoomBackend
+
         assert issubclass(DocmanQueryBackend, LoomBackend)
 
 
@@ -112,23 +113,17 @@ class TestDocmanDefaults:
     """Tests that Docman wrapper sets correct schema defaults."""
 
     def test_filter_by_document_type(self, backend, config, populated_db):
-        result = backend.process_sync(
-            {"action": "filter", "document_type": "invoice"}, config
-        )
+        result = backend.process_sync({"action": "filter", "document_type": "invoice"}, config)
         output = result["output"]
         assert output["total"] == 1
         assert output["results"][0]["source_file"] == "invoice.pdf"
 
     def test_filter_by_has_tables(self, backend, config, populated_db):
-        result = backend.process_sync(
-            {"action": "filter", "has_tables": True}, config
-        )
+        result = backend.process_sync({"action": "filter", "has_tables": True}, config)
         assert result["output"]["total"] == 2
 
     def test_filter_by_page_range(self, backend, config, populated_db):
-        result = backend.process_sync(
-            {"action": "filter", "min_pages": 5, "max_pages": 20}, config
-        )
+        result = backend.process_sync({"action": "filter", "min_pages": 5, "max_pages": 20}, config)
         assert result["output"]["total"] == 1
         assert result["output"]["results"][0]["source_file"] == "report.pdf"
 
@@ -149,23 +144,17 @@ class TestDocmanDefaults:
 
     def test_get_parses_json_columns(self, backend, config, populated_db):
         doc_id = populated_db[0]
-        result = backend.process_sync(
-            {"action": "get", "document_id": doc_id}, config
-        )
+        result = backend.process_sync({"action": "get", "document_id": doc_id}, config)
         doc = result["output"]["document"]
         assert isinstance(doc["sections"], list)
         assert isinstance(doc["key_points"], list)
 
     def test_search_excludes_full_text(self, backend, config, populated_db):
-        result = backend.process_sync(
-            {"action": "search", "query": "climate"}, config
-        )
+        result = backend.process_sync({"action": "search", "query": "climate"}, config)
         for doc in result["output"]["results"]:
             assert "full_text" not in doc
 
     def test_get_includes_full_text(self, backend, config, populated_db):
         doc_id = populated_db[0]
-        result = backend.process_sync(
-            {"action": "get", "document_id": doc_id}, config
-        )
+        result = backend.process_sync({"action": "get", "document_id": doc_id}, config)
         assert "full_text" in result["output"]["document"]

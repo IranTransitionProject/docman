@@ -13,18 +13,19 @@ DoclingBackend extends SyncProcessingBackend, so process_sync() is tested
 directly (no asyncio needed for unit tests). The thread-pool offloading
 is tested via SyncProcessingBackend's own tests in Loom.
 """
-import json
 
-import pytest
+import json
 from unittest.mock import MagicMock, patch
 
-from docman.backends.docling_backend import DoclingBackend, DoclingConversionError
+import pytest
 from loom.worker.processor import BackendError
 
+from docman.backends.docling_backend import DoclingBackend, DoclingConversionError
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def workspace(tmp_path):
@@ -41,6 +42,7 @@ def backend(workspace):
 # ---------------------------------------------------------------------------
 # Input validation tests
 # ---------------------------------------------------------------------------
+
 
 class TestInputValidation:
     """Tests for pre-extraction input validation (no Docling interaction)."""
@@ -69,6 +71,7 @@ class TestInputValidation:
 # ---------------------------------------------------------------------------
 # Happy-path extraction test
 # ---------------------------------------------------------------------------
+
 
 class TestExtraction:
     """Tests that verify the full extraction flow with mocked Docling."""
@@ -206,6 +209,7 @@ class TestExtraction:
 # Error handling tests
 # ---------------------------------------------------------------------------
 
+
 class TestErrorHandling:
     """Tests that verify Docling and I/O failures produce DoclingConversionError."""
 
@@ -228,9 +232,7 @@ class TestErrorHandling:
             )
 
     @patch("docman.backends.docling_backend.DoclingBackend._build_converter")
-    def test_write_failure_raises_conversion_error(
-        self, mock_build, backend, workspace
-    ):
+    def test_write_failure_raises_conversion_error(self, mock_build, backend, workspace):
         """When writing the extracted JSON fails (disk full, permissions),
         the backend should wrap the OSError in DoclingConversionError."""
         (workspace / "good.pdf").write_bytes(b"%PDF-1.4 content")

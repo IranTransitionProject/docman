@@ -3,6 +3,7 @@
 Core search/similarity logic is tested in LOOM (tests/test_contrib_duckdb_vector.py).
 This file only tests that the Docman wrapper sets the correct defaults.
 """
+
 import json
 
 import duckdb
@@ -86,4 +87,5 @@ class TestDocmanDefaults:
 
     def test_is_subclass_of_loom_vector_tool(self):
         from loom.contrib.duckdb import DuckDBVectorTool as LoomVectorTool
+
         assert issubclass(DuckDBVectorTool, LoomVectorTool)

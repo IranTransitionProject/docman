@@ -10,18 +10,19 @@ Covers:
 DuckDBIngestBackend extends SyncProcessingBackend, so process_sync() is
 tested directly (no asyncio needed for unit tests).
 """
+
 import json
 
 import duckdb
 import pytest
-
-from docman.backends.duckdb_ingest import DuckDBIngestBackend, DuckDBError
 from loom.worker.processor import BackendError
 
+from docman.backends.duckdb_ingest import DuckDBError, DuckDBIngestBackend
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def workspace(tmp_path):
@@ -84,6 +85,7 @@ def extracted_json(workspace):
 # Basic validation tests
 # ---------------------------------------------------------------------------
 
+
 class TestValidation:
     """Tests for input validation and error hierarchy."""
 
@@ -108,6 +110,7 @@ class TestValidation:
 # Happy-path ingestion tests
 # ---------------------------------------------------------------------------
 
+
 class TestIngestion:
     """Tests for the full ingestion flow."""
 
@@ -121,7 +124,9 @@ class TestIngestion:
         assert output["source_file"] == "report.pdf"
         assert len(output["document_id"]) == 36  # UUID format
 
-    def test_data_persisted_in_database(self, backend, config, sample_payload, extracted_json, db_path):
+    def test_data_persisted_in_database(
+        self, backend, config, sample_payload, extracted_json, db_path
+    ):
         """Verify the document is actually stored in DuckDB with correct values."""
         result = backend.process_sync(sample_payload, config)
         doc_id = result["output"]["document_id"]
@@ -129,7 +134,8 @@ class TestIngestion:
         conn = duckdb.connect(db_path, read_only=True)
         try:
             row = conn.execute(
-                "SELECT source_file, document_type, page_count, has_tables, summary FROM documents WHERE id = ?",
+                "SELECT source_file, document_type, page_count, has_tables, summary "
+                "FROM documents WHERE id = ?",
                 [doc_id],
             ).fetchone()
         finally:
@@ -142,7 +148,9 @@ class TestIngestion:
         assert row[3] is True
         assert row[4] == "A comprehensive study on climate change impacts."
 
-    def test_sections_stored_as_json(self, backend, config, sample_payload, extracted_json, db_path):
+    def test_sections_stored_as_json(
+        self, backend, config, sample_payload, extracted_json, db_path
+    ):
         """Sections and key_points should be stored as JSON arrays."""
         result = backend.process_sync(sample_payload, config)
         doc_id = result["output"]["document_id"]
@@ -161,7 +169,9 @@ class TestIngestion:
         assert sections == ["Introduction", "Methods", "Results"]
         assert "Rising temperatures" in key_points
 
-    def test_schema_created_automatically(self, backend, config, sample_payload, extracted_json, db_path):
+    def test_schema_created_automatically(
+        self, backend, config, sample_payload, extracted_json, db_path
+    ):
         """The documents table should be created on first use."""
         # DB file doesn't exist yet -- process_sync should create it.
         backend.process_sync(sample_payload, config)
@@ -181,10 +191,13 @@ class TestIngestion:
 # Full-text storage tests
 # ---------------------------------------------------------------------------
 
+
 class TestFullTextStorage:
     """Tests for reading and storing full extracted text from workspace."""
 
-    def test_full_text_read_from_workspace(self, backend, config, sample_payload, extracted_json, db_path):
+    def test_full_text_read_from_workspace(
+        self, backend, config, sample_payload, extracted_json, db_path
+    ):
         """Full text should be read from the workspace JSON and stored in DB."""
         result = backend.process_sync(sample_payload, config)
         doc_id = result["output"]["document_id"]
@@ -244,10 +257,13 @@ class TestFullTextStorage:
 # Idempotent re-insert test
 # ---------------------------------------------------------------------------
 
+
 class TestIdempotency:
     """Tests for idempotent document re-processing."""
 
-    def test_multiple_inserts_create_separate_records(self, backend, config, sample_payload, extracted_json, db_path):
+    def test_multiple_inserts_create_separate_records(
+        self, backend, config, sample_payload, extracted_json, db_path
+    ):
         """Each ingestion creates a new UUID, so multiple runs create separate records."""
         result1 = backend.process_sync(sample_payload, config)
         result2 = backend.process_sync(sample_payload, config)
@@ -267,25 +283,28 @@ class TestIdempotency:
 # Embedding tests
 # ---------------------------------------------------------------------------
 
+
 class TestEmbeddingGeneration:
     """Tests for optional vector embedding generation during ingestion."""
 
-    def test_no_embedding_config_stores_null(self, backend, config, sample_payload, extracted_json, db_path):
+    def test_no_embedding_config_stores_null(
+        self, backend, config, sample_payload, extracted_json, db_path
+    ):
         """Without embedding config, embedding column is null."""
         result = backend.process_sync(sample_payload, config)
         doc_id = result["output"]["document_id"]
 
         conn = duckdb.connect(db_path, read_only=True)
         try:
-            row = conn.execute(
-                "SELECT embedding FROM documents WHERE id = ?", [doc_id]
-            ).fetchone()
+            row = conn.execute("SELECT embedding FROM documents WHERE id = ?", [doc_id]).fetchone()
         finally:
             conn.close()
 
         assert row[0] is None
 
-    def test_embedding_stored_when_configured(self, backend, config, sample_payload, extracted_json, db_path, monkeypatch):
+    def test_embedding_stored_when_configured(
+        self, backend, config, sample_payload, extracted_json, db_path, monkeypatch
+    ):
         """With embedding config and mocked Ollama, embedding is stored."""
         config["embedding"] = {"model": "nomic-embed-text", "ollama_url": "http://test:11434"}
 
@@ -302,16 +321,16 @@ class TestEmbeddingGeneration:
 
         conn = duckdb.connect(db_path, read_only=True)
         try:
-            row = conn.execute(
-                "SELECT embedding FROM documents WHERE id = ?", [doc_id]
-            ).fetchone()
+            row = conn.execute("SELECT embedding FROM documents WHERE id = ?", [doc_id]).fetchone()
         finally:
             conn.close()
 
         assert row[0] is not None
         assert list(row[0]) == pytest.approx(fake_embedding, rel=1e-5)
 
-    def test_embedding_failure_stores_null(self, backend, config, sample_payload, extracted_json, db_path, monkeypatch):
+    def test_embedding_failure_stores_null(
+        self, backend, config, sample_payload, extracted_json, db_path, monkeypatch
+    ):
         """If embedding generation fails, null is stored (no crash)."""
         config["embedding"] = {"model": "nomic-embed-text"}
 
@@ -326,9 +345,7 @@ class TestEmbeddingGeneration:
 
         conn = duckdb.connect(db_path, read_only=True)
         try:
-            row = conn.execute(
-                "SELECT embedding FROM documents WHERE id = ?", [doc_id]
-            ).fetchone()
+            row = conn.execute("SELECT embedding FROM documents WHERE id = ?", [doc_id]).fetchone()
         finally:
             conn.close()
 
@@ -343,9 +360,7 @@ class TestEmbeddingGeneration:
 
         conn = duckdb.connect(db_path, read_only=True)
         try:
-            row = conn.execute(
-                "SELECT embedding FROM documents WHERE id = ?", [doc_id]
-            ).fetchone()
+            row = conn.execute("SELECT embedding FROM documents WHERE id = ?", [doc_id]).fetchone()
         finally:
             conn.close()
 
@@ -368,6 +383,7 @@ class TestEmbeddingGeneration:
 # ---------------------------------------------------------------------------
 # View creation test
 # ---------------------------------------------------------------------------
+
 
 class TestViewCreation:
     """Tests for the document_summaries view."""

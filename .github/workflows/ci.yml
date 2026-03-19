@@ -23,7 +23,8 @@ jobs:
       # Symlink so [tool.uv.sources] path "../loom" resolves in CI
       - run: ln -s "$GITHUB_WORKSPACE/loom" "$GITHUB_WORKSPACE/../loom"
       - run: uv sync --extra dev
-      - run: uv run ruff check src/
+      - run: uv run ruff check src/ tests/
+      - run: uv run ruff format --check src/ tests/
 
   test:
     runs-on: ubuntu-latest

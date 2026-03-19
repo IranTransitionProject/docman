@@ -7,23 +7,36 @@ stats groups) on top of the generic DuckDBQueryBackend from LOOM.
 Input:  {"action": "search|filter|stats|get|vector_search", ...action-specific params}
 Output: {"results": [...], "total": int} or {"document": {...}}
 
-See also:
+See Also:
     configs/workers/doc_query.yaml -- worker config with I/O schemas
     src/docman/backends/duckdb_ingest.py -- ingestion backend
 """
+
 from __future__ import annotations
 
 from loom.contrib.duckdb import (
     DuckDBQueryBackend as _BaseDuckDBQueryBackend,
+)
+from loom.contrib.duckdb import (
     DuckDBQueryError,
 )
 
 # Columns returned in search/filter results. Excludes full_text to keep
 # NATS messages small — use the "get" action to retrieve full content.
 _RESULT_COLUMNS = [
-    "id", "source_file", "file_ref", "page_count", "has_tables",
-    "sections", "document_type", "classification_confidence",
-    "summary", "key_points", "word_count", "text_preview", "ingested_at",
+    "id",
+    "source_file",
+    "file_ref",
+    "page_count",
+    "has_tables",
+    "sections",
+    "document_type",
+    "classification_confidence",
+    "summary",
+    "key_points",
+    "word_count",
+    "text_preview",
+    "ingested_at",
 ]
 
 
@@ -59,4 +72,4 @@ class DocmanQueryBackend(_BaseDuckDBQueryBackend):
 #   processing_backend: "docman.backends.duckdb_query.DuckDBQueryBackend"
 DuckDBQueryBackend = DocmanQueryBackend
 
-__all__ = ["DuckDBQueryBackend", "DocmanQueryBackend", "DuckDBQueryError"]
+__all__ = ["DocmanQueryBackend", "DuckDBQueryBackend", "DuckDBQueryError"]

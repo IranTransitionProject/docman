@@ -16,15 +16,17 @@ Input:  Aggregated pipeline results (source_file, extraction metadata,
         classification, summary).
 Output: {"document_id": str, "status": "inserted", "source_file": str}
 
-See also:
+See Also:
     configs/workers/doc_ingest.yaml -- worker config with I/O schemas
     src/docman/backends/duckdb_query.py -- query/analytics backend
     loom.worker.processor.SyncProcessingBackend -- base class for sync backends
     loom.core.workspace.WorkspaceManager -- file-ref resolution with path safety
 """
+
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import uuid
@@ -32,7 +34,6 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
-
 from loom.core.workspace import WorkspaceManager
 from loom.worker.processor import BackendError, SyncProcessingBackend
 
@@ -157,9 +158,7 @@ class DuckDBIngestBackend(SyncProcessingBackend):
             )
             return ""
 
-    def _generate_embedding(
-        self, full_text: str, config: dict[str, Any]
-    ) -> list[float] | None:
+    def _generate_embedding(self, full_text: str, config: dict[str, Any]) -> list[float] | None:
         """Generate a vector embedding for the document text.
 
         Uses the Ollama embedding provider when ``embedding`` config is
@@ -237,16 +236,14 @@ class DuckDBIngestBackend(SyncProcessingBackend):
         # already exists.
         conn.execute("INSTALL fts")
         conn.execute("LOAD fts")
-        try:
+        with contextlib.suppress(duckdb.Error):
+            # Index may already exist or table may be empty; both are fine.
             conn.execute("""
                 PRAGMA create_fts_index(
                     'documents', 'id', 'full_text', 'summary', 'text_preview',
                     overwrite=1
                 )
             """)
-        except duckdb.Error:
-            # Index may already exist or table may be empty; both are fine.
-            pass
 
         # Create summary view for LLM tool access (excludes full_text).
         conn.execute("""

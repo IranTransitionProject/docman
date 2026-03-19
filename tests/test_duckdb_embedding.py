@@ -12,18 +12,19 @@ Covers the embedding generation logic in isolation:
 
 OllamaEmbeddingProvider and asyncio.run are mocked -- no Ollama needed.
 """
+
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from docman.backends.duckdb_ingest import DuckDBIngestBackend, _EMBED_TEXT_LIMIT
-
+from docman.backends.duckdb_ingest import _EMBED_TEXT_LIMIT, DuckDBIngestBackend
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def backend(tmp_path):
@@ -34,6 +35,7 @@ def backend(tmp_path):
 # ---------------------------------------------------------------------------
 # No-op / early-return tests
 # ---------------------------------------------------------------------------
+
 
 class TestEmbeddingSkipped:
     """Tests for cases where embedding generation is skipped."""
@@ -59,6 +61,7 @@ class TestEmbeddingSkipped:
 # Successful embedding tests
 # ---------------------------------------------------------------------------
 
+
 class TestEmbeddingSuccess:
     """Tests for successful embedding generation."""
 
@@ -82,9 +85,7 @@ class TestEmbeddingSuccess:
 
     @patch("docman.backends.duckdb_ingest.asyncio.run")
     @patch("loom.worker.embeddings.OllamaEmbeddingProvider")
-    def test_text_under_limit_sent_in_full(
-        self, mock_provider_cls, mock_asyncio_run, backend
-    ):
+    def test_text_under_limit_sent_in_full(self, mock_provider_cls, mock_asyncio_run, backend):
         """Text shorter than _EMBED_TEXT_LIMIT should be sent without truncation."""
         short_text = "A" * 100
         mock_asyncio_run.return_value = [0.1]
@@ -102,9 +103,7 @@ class TestEmbeddingSuccess:
 
     @patch("docman.backends.duckdb_ingest.asyncio.run")
     @patch("loom.worker.embeddings.OllamaEmbeddingProvider")
-    def test_text_over_limit_truncated(
-        self, mock_provider_cls, mock_asyncio_run, backend
-    ):
+    def test_text_over_limit_truncated(self, mock_provider_cls, mock_asyncio_run, backend):
         """Text longer than _EMBED_TEXT_LIMIT should be truncated to 8000 chars."""
         long_text = "B" * 12000
         mock_asyncio_run.return_value = [0.2]
@@ -138,14 +137,13 @@ class TestEmbeddingSuccess:
 # Error handling tests
 # ---------------------------------------------------------------------------
 
+
 class TestEmbeddingErrors:
     """Tests for embedding failure scenarios."""
 
     @patch("docman.backends.duckdb_ingest.asyncio.run")
     @patch("loom.worker.embeddings.OllamaEmbeddingProvider")
-    def test_provider_failure_returns_none(
-        self, mock_provider_cls, mock_asyncio_run, backend
-    ):
+    def test_provider_failure_returns_none(self, mock_provider_cls, mock_asyncio_run, backend):
         """If the embedding provider raises, _generate_embedding returns None."""
         mock_asyncio_run.side_effect = ConnectionError("Ollama not running")
 
