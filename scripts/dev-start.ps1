@@ -9,7 +9,7 @@
 # Prerequisites:
 #   - Docker Desktop running (NATS + Redis containers)
 #   - Ollama running with a model (default: command-r7b:latest)
-#   - Python venv activated
+#   - uv installed (https://docs.astral.sh/uv/) and deps synced: uv sync --extra dev
 
 param(
     [ValidateSet("start", "submit", "stop", "status")]
@@ -54,9 +54,11 @@ function Test-Prerequisites {
         exit 1
     }
 
-    # Check venv
-    if (-not $env:VIRTUAL_ENV) {
-        Write-Warn "No virtualenv active. Activate with: .venv\Scripts\Activate.ps1"
+    # Check uv / venv
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        Write-Warn "uv not found. Install from: https://docs.astral.sh/uv/"
+    } elseif (-not $env:VIRTUAL_ENV) {
+        Write-Warn "No virtualenv active. Run 'uv sync --extra dev' or '.venv\Scripts\Activate.ps1'"
     }
 
     # Create directories

@@ -63,10 +63,9 @@ to study or fork.
 ## Quick Start
 
 ```bash
-# Requires Python 3.11+
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-pytest tests/ -v   # 40 tests, no infrastructure needed
+# Requires Python 3.11+ and uv (https://docs.astral.sh/uv/)
+uv sync --extra dev
+uv run pytest tests/ -v   # 40 tests, no infrastructure needed
 ```
 
 For full environment setup with Docling, Ollama, NATS, and the complete

@@ -9,6 +9,7 @@ No prior developer experience is assumed. If you already have some of these tool
 ## What you'll end up with
 
 - **Python 3.13** — the programming language everything runs on
+- **uv** — fast Python package manager (replaces pip and venv)
 - **Git** — version control for downloading and contributing to the code
 - **Docker Desktop** — runs NATS (message broker) and Redis (data store) in containers
 - **Ollama** — runs AI models locally on your PC
@@ -83,10 +84,11 @@ You should see `git version 2.x.x.windows.x`.
 
 ---
 
-## Step 4: Install Python 3.13
+## Step 4: Install Python 3.13 and uv
 
 ```powershell
 winget install -e --id Python.Python.3.13
+winget install -e --id astral-sh.uv
 ```
 
 **Close and reopen Terminal** again. Then verify:
@@ -218,94 +220,72 @@ git clone https://github.com/IranTransitionProject/framework.git
 
 ---
 
-## Step 9: Create a Python virtual environment
+## Step 9: Install Loom and Docman
 
-A virtual environment keeps this project's dependencies separate from your system Python.
-
-```powershell
-cd C:\Dev\IranTransitionProject
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
-
-Your terminal prompt should now show `(.venv)` at the beginning. This means the virtual environment is active.
-
-> **If you get an error about "execution of scripts is disabled":** Run this command first and then try again:
-> ```powershell
-> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-> ```
-
-> **Important:** Every time you open a new Terminal window to work on this project, activate the virtual environment:
-> ```powershell
-> cd C:\Dev\IranTransitionProject
-> .venv\Scripts\Activate.ps1
-> ```
-
----
-
-## Step 10: Install Loom and Docman
-
-With the virtual environment active:
+`uv` manages virtual environments and dependencies automatically — no manual venv activation needed.
 
 ```powershell
-# Install Loom (the framework) with local model support
-pip install -e "loom[dev,local]"
+# Install Loom (the framework) with all extras
+cd C:\Dev\IranTransitionProject\loom
+uv sync --all-extras
 
 # Install Docman (the test project) with dev tools
-pip install -e "docman[dev]"
+# This also resolves Loom from the sibling directory automatically
+cd C:\Dev\IranTransitionProject\docman
+uv sync --extra dev
 ```
 
 This will download and install many packages (including PyTorch for document processing). This is the longest step — it may take 10–15 minutes.
 
-> **Note for NVIDIA GPU owners:** By default, pip installs CPU-only PyTorch on Windows. To enable GPU acceleration for Docling's document layout detection, install the CUDA version instead:
+> **Note for NVIDIA GPU owners:** By default, uv installs CPU-only PyTorch on Windows. To enable GPU acceleration for Docling's document layout detection, install the CUDA version instead:
 > ```powershell
-> pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+> uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 > ```
-> Run this *before* `pip install -e "docman[dev]"`. If you don't have an NVIDIA GPU, skip this — CPU works fine, just slower.
+> Run this *before* `uv sync --extra dev`. If you don't have an NVIDIA GPU, skip this — CPU works fine, just slower.
 
 Verify installation:
 
 ```powershell
-loom --help
+uv run loom --help
 ```
 
 You should see a list of Loom commands: `worker`, `processor`, `pipeline`, `orchestrator`, `scheduler`, `router`, `submit`, `mcp`.
 
 ---
 
-## Step 11: Download Docling detection models
+## Step 10: Download Docling detection models
 
 Docling uses AI models for document layout detection. Pre-download them:
 
 ```powershell
-docling-tools models download
+uv run docling-tools models download
 ```
 
 This downloads a few hundred MB. They're cached in your user profile under `.cache\docling\models\`.
 
 ---
 
-## Step 12: Run the tests
+## Step 11: Run the tests
 
 Verify everything is installed correctly:
 
 ```powershell
 # Test Loom
 cd C:\Dev\IranTransitionProject\loom
-pytest tests/ -v --ignore=tests/test_integration.py
+uv run pytest tests/ -v --ignore=tests/test_integration.py
 
 # Test Docman
 cd C:\Dev\IranTransitionProject\docman
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 All tests should pass (green). The Loom integration test is excluded because it needs the full pipeline running.
 
 ---
 
-## Step 13: Run the full pipeline
+## Step 12: Run the full pipeline
 
-### 13a: Set environment variables
+### 12a: Set environment variables
 
 ```powershell
 cd C:\Dev\IranTransitionProject\docman
@@ -315,7 +295,7 @@ $env:OLLAMA_URL = "http://localhost:11434"
 $env:OLLAMA_MODEL = "command-r7b:latest"
 ```
 
-### 13b: Create a test workspace
+### 12b: Create a test workspace
 
 ```powershell
 mkdir C:\temp\docman-workspace -Force
@@ -327,7 +307,7 @@ If you have a PDF you'd like to test with, copy it there:
 Copy-Item "$HOME\Downloads\your-document.pdf" C:\temp\docman-workspace\
 ```
 
-### 13c: Start the pipeline
+### 12c: Start the pipeline
 
 ```powershell
 .\scripts\dev-start.ps1
@@ -335,13 +315,13 @@ Copy-Item "$HOME\Downloads\your-document.pdf" C:\temp\docman-workspace\
 
 This starts the pipeline components in the background: router, extractor, classifier, summarizer, ingest, and pipeline orchestrator.
 
-### 13d: Submit a test document
+### 12d: Submit a test document
 
 ```powershell
 .\scripts\dev-start.ps1 -Action submit -File test_report.pdf
 ```
 
-### 13e: Watch the logs
+### 12e: Watch the logs
 
 ```powershell
 Get-Content .dev-pids\*.log -Tail 30 -Wait
@@ -349,7 +329,7 @@ Get-Content .dev-pids\*.log -Tail 30 -Wait
 
 Press **Ctrl + C** to stop watching logs.
 
-### 13f: Stop the pipeline
+### 12f: Stop the pipeline
 
 ```powershell
 .\scripts\dev-start.ps1 -Action stop
@@ -370,7 +350,7 @@ Workers are defined by YAML configuration files. To create a new one:
 2. Edit the file in any text editor (Notepad, VS Code, etc.) to define your worker's system prompt, input/output schemas, and behavior
 3. Start it:
    ```powershell
-   loom worker --config configs\workers\my_new_worker.yaml --tier local --nats-url nats://localhost:4222
+   uv run loom worker --config configs\workers\my_new_worker.yaml --tier local --nats-url nats://localhost:4222
    ```
 
 See `loom\configs\workers\_template.yaml` for a blank template with documentation.
@@ -422,7 +402,7 @@ If you're switching between a Mac and a Windows setup, here are the important di
 | What | macOS | Windows |
 |------|-------|---------|
 | Terminal command | `python3` | `python` |
-| Activate venv | `source .venv/bin/activate` | `.venv\Scripts\Activate.ps1` |
+| Run tools | `uv run <command>` | `uv run <command>` |
 | Path separator | `/` (forward slash) | `\` (backslash) |
 | Startup script | `./scripts/dev-start.sh` | `.\scripts\dev-start.ps1` |
 | Extractor config | `doc_extractor.yaml` (MPS GPU) | `doc_extractor_windows.yaml` (CPU) |
@@ -455,10 +435,11 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### "loom is not recognized"
 
-Make sure your virtual environment is active (you should see `(.venv)` in your prompt). If it is active and `loom` still isn't found:
+Use `uv run loom` instead of bare `loom`. Or re-run `uv sync` in the project directory:
 
 ```powershell
-pip install -e "C:\Dev\IranTransitionProject\loom[dev,local]"
+cd C:\Dev\IranTransitionProject\loom
+uv sync --all-extras
 ```
 
 ### Docker Desktop won't start
@@ -475,7 +456,7 @@ pip install -e "C:\Dev\IranTransitionProject\loom[dev,local]"
 
 ### "ModuleNotFoundError" when running tests
 
-Make sure you installed both packages in editable mode (Step 10) and that your virtual environment is active.
+Make sure you ran `uv sync` in both repos (Step 9). Use `uv run pytest` to ensure the correct environment is used.
 
 ### Container images fail on ARM/Snapdragon PCs
 

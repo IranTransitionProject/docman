@@ -123,28 +123,26 @@ See Loom's [Building Workflows](https://github.com/IranTransitionProject/loom/bl
 ## Build and test commands
 
 ```bash
-# Create venv and install (requires Python 3.11+, recommend 3.13)
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-# Also install Loom in editable mode (from sibling directory):
-pip install -e "../loom[dev,local]"
+# Install all dependencies (requires Python 3.11+, uses uv)
+# Loom is resolved from ../loom via [tool.uv.sources] in pyproject.toml
+uv sync --extra dev
 
 # Pre-download Docling detection models (avoids delay on first run)
-docling-tools models download
+uv run docling-tools models download
 
 # Run unit tests (no infrastructure needed)
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run with infrastructure (needs NATS + Loom installed)
 # Terminal 1: docker run -p 4222:4222 nats:latest
-# Terminal 2: NATS_URL=nats://localhost:4222 loom router --nats-url nats://localhost:4222
-# Terminal 3: loom processor --config configs/workers/doc_extractor.yaml --nats-url nats://localhost:4222
-# Terminal 4: OLLAMA_URL=http://localhost:11434 loom worker --config configs/workers/doc_classifier.yaml --tier local --nats-url nats://localhost:4222
-# Terminal 5: ANTHROPIC_API_KEY=sk-... loom worker --config configs/workers/doc_summarizer.yaml --tier standard --nats-url nats://localhost:4222
-# Terminal 6: loom processor --config configs/workers/doc_ingest.yaml --nats-url nats://localhost:4222
-# Terminal 7: loom processor --config configs/workers/doc_query.yaml --nats-url nats://localhost:4222
-# Terminal 8: loom pipeline --config configs/orchestrators/doc_pipeline.yaml --nats-url nats://localhost:4222
-# Submit:     loom submit "Process document" --context file_ref=test.pdf --nats-url nats://localhost:4222
+# Terminal 2: uv run loom router --nats-url nats://localhost:4222
+# Terminal 3: uv run loom processor --config configs/workers/doc_extractor.yaml --nats-url nats://localhost:4222
+# Terminal 4: OLLAMA_URL=http://localhost:11434 uv run loom worker --config configs/workers/doc_classifier.yaml --tier local --nats-url nats://localhost:4222
+# Terminal 5: ANTHROPIC_API_KEY=sk-... uv run loom worker --config configs/workers/doc_summarizer.yaml --tier standard --nats-url nats://localhost:4222
+# Terminal 6: uv run loom processor --config configs/workers/doc_ingest.yaml --nats-url nats://localhost:4222
+# Terminal 7: uv run loom processor --config configs/workers/doc_query.yaml --nats-url nats://localhost:4222
+# Terminal 8: uv run loom pipeline --config configs/orchestrators/doc_pipeline.yaml --nats-url nats://localhost:4222
+# Submit:     uv run loom submit "Process document" --context file_ref=test.pdf --nats-url nats://localhost:4222
 ```
 
 ## Current state

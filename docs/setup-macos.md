@@ -9,6 +9,7 @@ No prior developer experience is assumed. If you already have some of these tool
 ## What you'll end up with
 
 - **Python 3.13** — the programming language everything runs on
+- **uv** — fast Python package manager (replaces pip and venv)
 - **Git** — version control for downloading and contributing to the code
 - **OrbStack** — lightweight container runtime (runs NATS message broker and Redis)
 - **Ollama** — runs AI models locally on your Mac
@@ -62,10 +63,10 @@ You should see something like `Homebrew 4.x.x`.
 
 ---
 
-## Step 3: Install Python, Git, and basic tools
+## Step 3: Install Python, Git, uv, and basic tools
 
 ```bash
-brew install python@3.13 git
+brew install python@3.13 git uv
 ```
 
 Verify both installed:
@@ -188,36 +189,19 @@ git clone https://github.com/IranTransitionProject/framework.git
 
 ---
 
-## Step 8: Create a Python virtual environment
+## Step 8: Install Loom and Docman
 
-A virtual environment keeps this project's dependencies separate from your system Python.
-
-```bash
-cd ~/Developer/IranTransitionProject
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-Your terminal prompt should now show `(.venv)` at the beginning. This means the virtual environment is active.
-
-> **Important:** Every time you open a new Terminal window to work on this project, you need to activate the virtual environment:
-> ```bash
-> cd ~/Developer/IranTransitionProject
-> source .venv/bin/activate
-> ```
-
----
-
-## Step 9: Install Loom and Docman
-
-With the virtual environment active:
+`uv` manages virtual environments and dependencies automatically — no manual venv activation needed.
 
 ```bash
-# Install Loom (the framework) with local model support
-pip install -e "loom[dev,local]"
+# Install Loom (the framework) with all extras
+cd ~/Developer/IranTransitionProject/loom
+uv sync --all-extras
 
 # Install Docman (the test project) with dev tools
-pip install -e "docman[dev]"
+# This also resolves Loom from the sibling directory automatically
+cd ~/Developer/IranTransitionProject/docman
+uv sync --extra dev
 ```
 
 This will download and install many packages (including PyTorch for document processing). It may take 5–10 minutes.
@@ -225,48 +209,48 @@ This will download and install many packages (including PyTorch for document pro
 Verify installation:
 
 ```bash
-loom --help
+uv run loom --help
 ```
 
 You should see a list of Loom commands: `worker`, `processor`, `pipeline`, `orchestrator`, `scheduler`, `router`, `submit`, `mcp`.
 
 ---
 
-## Step 10: Download Docling detection models
+## Step 9: Download Docling detection models
 
 Docling uses AI models for document layout detection. Pre-download them so they're ready when you need them:
 
 ```bash
-docling-tools models download
+uv run docling-tools models download
 ```
 
 This downloads a few hundred MB of models. They're cached at `~/.cache/docling/models/`.
 
 ---
 
-## Step 11: Run the tests
+## Step 10: Run the tests
 
 Let's verify everything is installed correctly:
 
 ```bash
 # Test Loom
 cd ~/Developer/IranTransitionProject/loom
-pytest tests/ -v --ignore=tests/test_integration.py
+uv run pytest tests/ -v --ignore=tests/test_integration.py
 
 # Test Docman
 cd ~/Developer/IranTransitionProject/docman
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 All tests should pass (green). The Loom integration test is excluded because it needs the full pipeline running.
 
 ---
 
-## Step 12: Run the full pipeline
+## Step 11: Run the full pipeline
 
 Now let's run the complete document processing pipeline.
 
-### 12a: Set environment variables
+### 11a: Set environment variables
 
 ```bash
 cd ~/Developer/IranTransitionProject/docman
@@ -275,7 +259,7 @@ source .env
 
 This sets `NATS_URL`, `OLLAMA_URL`, and `OLLAMA_MODEL`.
 
-### 12b: Create a test workspace
+### 11b: Create a test workspace
 
 ```bash
 mkdir -p /tmp/docman-workspace
@@ -287,7 +271,7 @@ If you have a PDF you'd like to test with, copy it there:
 cp ~/Downloads/your-document.pdf /tmp/docman-workspace/
 ```
 
-### 12c: Start the pipeline
+### 11c: Start the pipeline
 
 ```bash
 ./scripts/dev-start.sh
@@ -295,13 +279,13 @@ cp ~/Downloads/your-document.pdf /tmp/docman-workspace/
 
 This starts the pipeline components in the background: router, extractor, classifier, summarizer, ingest, and pipeline orchestrator.
 
-### 12d: Submit a test document
+### 11d: Submit a test document
 
 ```bash
 ./scripts/dev-start.sh submit test_report.pdf
 ```
 
-### 12e: Watch the logs
+### 11e: Watch the logs
 
 ```bash
 tail -f .dev-pids/*.log
@@ -309,7 +293,7 @@ tail -f .dev-pids/*.log
 
 Press **Ctrl + C** to stop watching logs.
 
-### 12f: Stop the pipeline
+### 11f: Stop the pipeline
 
 ```bash
 ./scripts/dev-start.sh stop
@@ -330,7 +314,7 @@ Workers are defined by YAML configuration files. To create a new one:
 2. Edit the file to define your worker's system prompt, input/output schemas, and behavior
 3. Start it:
    ```bash
-   loom worker --config configs/workers/my_new_worker.yaml --tier local --nats-url nats://localhost:4222
+   uv run loom worker --config configs/workers/my_new_worker.yaml --tier local --nats-url nats://localhost:4222
    ```
 
 See `loom/configs/workers/_template.yaml` for a blank template with documentation.
@@ -387,7 +371,7 @@ Make sure Homebrew's Python is installed: `brew install python@3.13`
 
 ### "command not found: loom"
 
-Make sure your virtual environment is active: `source .venv/bin/activate`
+Use `uv run loom` instead of bare `loom`, or activate the venv: `source .venv/bin/activate`
 
 ### NATS or Redis container not running
 
@@ -403,7 +387,7 @@ Some larger models need more RAM than your Mac has available. Stick with models 
 
 ### "ModuleNotFoundError" when running tests
 
-Make sure you installed both packages in editable mode (Step 9) and that your virtual environment is active.
+Make sure you ran `uv sync` in both repos (Step 8). Use `uv run pytest` to ensure the correct environment is used.
 
 ### Slow first run of document extraction
 

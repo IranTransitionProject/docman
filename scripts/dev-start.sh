@@ -8,8 +8,8 @@
 #
 # Prerequisites:
 #   - OrbStack / Docker running (NATS + Redis containers)
-#   - Ollama running with a model (default: gemma3:27b)
-#   - Python venv activated: source ../.venv/bin/activate
+#   - Ollama running with a model (default: command-r7b:latest)
+#   - uv installed (https://docs.astral.sh/uv/) and deps synced: uv sync --extra dev
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,9 +50,11 @@ check_prereqs() {
     fi
     log "Ollama: running (model: $OLLAMA_MODEL)"
 
-    # Check venv
-    if [ -z "${VIRTUAL_ENV:-}" ]; then
-        warn "No virtualenv active. Activate with: source ../.venv/bin/activate"
+    # Check uv / venv
+    if ! command -v uv &> /dev/null; then
+        warn "uv not found. Install from: https://docs.astral.sh/uv/"
+    elif [ -z "${VIRTUAL_ENV:-}" ]; then
+        warn "No virtualenv active. Run 'uv sync --extra dev' or 'source .venv/bin/activate'"
     fi
 
     # Create workspace
