@@ -83,7 +83,7 @@ and mocked backends for testing.
 1. Fork the repo
 2. Make changes in a feature branch
 3. Sign the CLA when prompted
-4. Ensure all tests pass: `pytest tests/ -v`
+4. Ensure all tests pass: `uv run pytest tests/ -v`
 5. Submit a pull request with a clear description of what changed and why
 
 Expect review feedback focused on Loom compatibility and test coverage.
