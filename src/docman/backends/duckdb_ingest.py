@@ -67,6 +67,7 @@ class DuckDBIngestBackend(SyncProcessingBackend):
     """
 
     def __init__(self, db_path: str = "/tmp/docman-workspace/docman.duckdb") -> None:
+        super().__init__(serialize_writes=True)
         self.db_path = Path(db_path)
 
     def process_sync(self, payload: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:

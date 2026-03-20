@@ -1,0 +1,34 @@
+name: docman
+version: "0.4.0"
+description: "Document processing pipeline — extract, classify, summarize, ingest"
+loom_version: ">=0.4.0"
+
+required_extras:
+  - duckdb
+  - docproc
+
+python_package:
+  name: docman
+  install_path: "src/"
+
+entry_configs:
+  workers:
+    - config: configs/workers/doc_extractor.yaml
+      tier: local
+    - config: configs/workers/doc_extractor_windows.yaml
+      tier: local
+    - config: configs/workers/doc_classifier.yaml
+      tier: local
+    - config: configs/workers/doc_summarizer.yaml
+      tier: standard
+    - config: configs/workers/doc_summarizer_local.yaml
+      tier: local
+    - config: configs/workers/doc_ingest.yaml
+      tier: local
+    - config: configs/workers/doc_query.yaml
+      tier: local
+  pipelines:
+    - config: configs/orchestrators/doc_pipeline.yaml
+    - config: configs/orchestrators/doc_pipeline_local.yaml
+  mcp:
+    - config: configs/mcp/docman.yaml

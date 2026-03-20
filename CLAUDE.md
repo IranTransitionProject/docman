@@ -2,7 +2,7 @@
 
 ## What this project is
 
-Docman is a test project that evaluates the Loom framework architecture. It implements a document processing pipeline using Docling for PDF/DOCX extraction, with LLM-based classification and summarization stages.
+Docman (v0.4.0) is a test project that evaluates the Loom framework architecture. It implements a document processing pipeline using Docling for PDF/DOCX extraction, with LLM-based classification and summarization stages.
 
 This is a **consumer** of the Loom framework — it provides concrete worker configs, processing backends, and pipeline definitions. The Loom framework itself lives in a separate repo.
 
@@ -12,14 +12,19 @@ This is a **consumer** of the Loom framework — it provides concrete worker con
 src/docman/
   backends/
     docling_backend.py   # DoclingBackend — PDF/DOCX extraction via Docling
-    duckdb_ingest.py     # DuckDBIngestBackend — document persistence to DuckDB (with optional embeddings)
-    duckdb_query.py      # DocmanQueryBackend — thin subclass of loom.contrib.duckdb.DuckDBQueryBackend with Docman schema defaults
+    duckdb_ingest.py     # DuckDBIngestBackend — document persistence (serialize_writes=True)
+    duckdb_query.py      # DocmanQueryBackend — thin subclass of loom.contrib.duckdb.DuckDBQueryBackend
   tools/
-    vector_search.py     # DuckDBVectorTool — thin wrapper around loom.contrib.duckdb.DuckDBVectorTool with Docman defaults
+    vector_search.py     # DuckDBVectorTool — thin wrapper around loom.contrib.duckdb.DuckDBVectorTool
+manifest.yaml            # App manifest for Loom Workshop deployment
 configs/
   workers/        # YAML configs for doc_extractor, doc_classifier, doc_summarizer, doc_ingest, doc_query
   orchestrators/  # Pipeline config (doc_pipeline.yaml, doc_pipeline_local.yaml)
   mcp/            # MCP gateway config (docman.yaml)
+scripts/
+  dev-start.sh    # Local development launcher
+  dev-start.ps1   # Windows development launcher
+  build-app.sh    # Build deployment ZIP for Loom Workshop
 docs/
   ARCHITECTURE.md   # System architecture overview
   CONTRIBUTING.md   # Contribution standards and CLA
@@ -149,12 +154,14 @@ uv run pytest tests/ -v
 
 The following items are **implemented and working**:
 - DoclingBackend (`src/docman/backends/docling_backend.py`) — complete with path traversal validation, configurable Docling tuning via backend_config, proper error handling (DoclingConversionError), production-quality docstrings
-- DuckDBIngestBackend (`src/docman/backends/duckdb_ingest.py`) — persists pipeline results to DuckDB with auto-schema creation, full-text storage from workspace, FTS index, optional vector embedding generation via Ollama
+- DuckDBIngestBackend (`src/docman/backends/duckdb_ingest.py`) — persists pipeline results to DuckDB with auto-schema creation, full-text storage from workspace, FTS index, optional vector embedding generation via Ollama. Uses `serialize_writes=True` for safe concurrent pipeline execution (asyncio.Lock prevents concurrent DuckDB writes)
 - DocmanQueryBackend (`src/docman/backends/duckdb_query.py`) — thin subclass of `loom.contrib.duckdb.DuckDBQueryBackend` with Docman document schema defaults (columns, filters, stats aggregates). Backward-compat alias `DuckDBQueryBackend = DocmanQueryBackend` for existing YAML configs.
 - DuckDBVectorTool (`src/docman/tools/vector_search.py`) — thin wrapper around `loom.contrib.duckdb.DuckDBVectorTool` with Docman-specific table, columns, and tool name defaults
 - Worker configs for all 4 pipeline stages + standalone query worker with I/O schemas — complete
 - Pipeline configs (`configs/orchestrators/doc_pipeline.yaml`, `doc_pipeline_local.yaml`) — 4-stage pipeline complete
 - Unit tests: 63 tests pass (DoclingBackend, DuckDB ingest, query wrapper defaults, vector search wrapper defaults, converter branch coverage, embedding truncation/error handling). Core DuckDB logic (64 tests) now tested in LOOM.
+- App manifest (`manifest.yaml`) — declares configs, Python package, and required Loom extras for Workshop deployment
+- Build script (`scripts/build-app.sh`) — generates `dist/docman-0.4.0.zip` for deployment via Loom Workshop
 
 ## What to implement next
 
