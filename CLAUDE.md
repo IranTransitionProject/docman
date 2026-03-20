@@ -2,7 +2,7 @@
 
 ## What this project is
 
-Docman (v0.4.0) is a test project that evaluates the Loom framework architecture. It implements a document processing pipeline using Docling for PDF/DOCX extraction, with LLM-based classification and summarization stages.
+Docman (v0.5.0) is a document processing pipeline built on the Loom framework. It extracts content from PDF, DOCX, PPTX, XLSX, and HTML files using an adaptive two-tier extraction strategy (MarkItDown for speed, Docling for depth), with LLM-based classification and summarization stages.
 
 This is a **consumer** of the Loom framework — it provides concrete worker configs, processing backends, and pipeline definitions. The Loom framework itself lives in a separate repo.
 
@@ -10,8 +10,11 @@ This is a **consumer** of the Loom framework — it provides concrete worker con
 
 ```
 src/docman/
+  contracts.py           # Pydantic I/O models — source of truth for worker schemas
   backends/
-    docling_backend.py   # DoclingBackend — PDF/DOCX extraction via Docling
+    docling_backend.py   # DoclingBackend — deep PDF/DOCX extraction via IBM Docling (OCR, tables)
+    markitdown_backend.py # MarkItDownBackend — fast extraction via Microsoft MarkItDown (no ML)
+    smart_extractor.py   # SmartExtractorBackend — MarkItDown-first, Docling fallback
     duckdb_ingest.py     # DuckDBIngestBackend — document persistence (serialize_writes=True)
     duckdb_query.py      # DocmanQueryBackend — thin subclass of loom.contrib.duckdb.DuckDBQueryBackend
   tools/
@@ -19,7 +22,7 @@ src/docman/
 manifest.yaml            # App manifest for Loom Workshop deployment
 configs/
   workers/        # YAML configs for doc_extractor, doc_classifier, doc_summarizer, doc_ingest, doc_query
-  orchestrators/  # Pipeline config (doc_pipeline.yaml, doc_pipeline_local.yaml)
+  orchestrators/  # Pipeline configs (doc_pipeline, doc_pipeline_local, doc_pipeline_smart)
   mcp/            # MCP gateway config (docman.yaml)
 scripts/
   dev-start.sh    # Local development launcher
@@ -37,46 +40,67 @@ tests/            # Unit tests (mock backends, in-memory DuckDB, no infrastructu
 ## Relationship to Loom
 
 Docman depends on `loom[duckdb]` as a package. It uses:
-- `ProcessingBackend` ABC — DoclingBackend, DuckDBIngestBackend implement this directly
+- `ProcessingBackend` ABC — DoclingBackend, MarkItDownBackend, SmartExtractorBackend, DuckDBIngestBackend implement this
+- `resolve_schema_refs()` — worker configs use `input_schema_ref` / `output_schema_ref` pointing to `docman.contracts.*` Pydantic models (Loom resolves to JSON Schema at load time)
 - `loom.contrib.duckdb.DuckDBQueryBackend` — DocmanQueryBackend subclasses this with Docman-specific schema defaults
 - `loom.contrib.duckdb.DuckDBVectorTool` — DuckDBVectorTool wraps this with Docman-specific column/table defaults
 - `loom.contrib.duckdb.DuckDBViewTool` — used directly (no Docman wrapper needed, already generic)
-- `ProcessorWorker` — runs DoclingBackend and DuckDB backends via `loom processor` CLI
+- `ProcessorWorker` — runs extraction and DuckDB backends via `loom processor` CLI
 - `LLMWorker` — runs classifier and summarizer via `loom worker` CLI
-- `PipelineOrchestrator` — orchestrates the 4-stage pipeline via `loom pipeline` CLI (now with dependency-aware parallel stage execution)
+- `PipelineOrchestrator` — orchestrates the 4-stage pipeline via `loom pipeline` CLI (with dependency-aware parallel stage execution)
 
 The CLI loads backends by fully qualified class path from worker configs:
 ```yaml
-processing_backend: "docman.backends.docling_backend.DoclingBackend"
+processing_backend: "docman.backends.smart_extractor.SmartExtractorBackend"
 ```
+
+## Extraction backends
+
+Docman provides three extraction backends, all producing the same output contract (`ExtractorOutput`):
+
+- **MarkItDownBackend** — Uses Microsoft MarkItDown for fast, lightweight document-to-Markdown conversion. No ML models, no torch dependency. Supports PDF, DOCX, PPTX, XLSX, HTML, and more. Cannot OCR scanned PDFs or extract complex table structures. Derives metadata (sections, tables, page count) from the Markdown output.
+- **DoclingBackend** — Uses IBM Docling for deep extraction with OCR, table structure recognition, and layout analysis. Requires torch. Best for scanned PDFs and complex layouts.
+- **SmartExtractorBackend** (recommended) — Composite backend that tries MarkItDown first and falls back to Docling when needed. Fallback triggers: extracted text shorter than `min_text_length` (default: 50 chars), MarkItDown error, or file extension in `force_docling_extensions` list. Reports `model_used: "markitdown"` or `"docling"` so you can see which path ran.
 
 ## Pipeline stages
 
-1. **doc_extractor** (ProcessorWorker + DoclingBackend) — Docling extracts text, tables, figures from PDF/DOCX. Writes extracted JSON to workspace, returns file_ref + metadata summary.
+1. **doc_extractor** (ProcessorWorker + SmartExtractorBackend or DoclingBackend) — Extracts text, tables, structure from documents. Writes extracted JSON to workspace, returns file_ref + metadata summary.
 2. **doc_classifier** (LLMWorker) — LLM classifies document type from text_preview + metadata. Returns document_type, confidence, reasoning.
 3. **doc_summarizer** (LLMWorker) — LLM summarizes based on document type and extracted content. Returns summary, key_points, word_count.
 4. **doc_ingest** (ProcessorWorker + DuckDBIngestBackend) — Persists all pipeline results (metadata, classification, summary, full text) into DuckDB. Reads full extracted text from workspace JSON. Returns document_id.
 
-**Pipeline execution order:** Loom's `PipelineOrchestrator` now auto-infers dependencies from `input_mapping` paths and runs independent stages concurrently. Docman's pipeline has genuinely sequential dependencies (classify depends on extract, summarize depends on both, ingest depends on all three), so it produces 4 levels of 1 stage each — identical sequential execution to before. No config changes were needed.
+**Pipeline execution order:** Loom's `PipelineOrchestrator` auto-infers dependencies from `input_mapping` paths and runs independent stages concurrently. Docman's pipeline has genuinely sequential dependencies (classify depends on extract, summarize depends on both, ingest depends on all three), so it produces 4 levels of 1 stage each — sequential execution.
+
+**Pipeline variants:**
+
+- `doc_pipeline.yaml` — Standard (Docling extraction, standard-tier summarizer)
+- `doc_pipeline_local.yaml` — All-local (Docling extraction, local-tier summarizer)
+- `doc_pipeline_smart.yaml` — Smart extraction (MarkItDown-first, standard-tier summarizer)
 
 **Scaling note:** To process multiple documents concurrently, run multiple pipeline orchestrator instances. NATS queue groups automatically load-balance across replicas:
 ```bash
 # Process 3 documents concurrently — each instance handles one goal
-loom pipeline --config configs/orchestrators/doc_pipeline.yaml &
-loom pipeline --config configs/orchestrators/doc_pipeline.yaml &
-loom pipeline --config configs/orchestrators/doc_pipeline.yaml &
+loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
+loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
+loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
 ```
 
 ## Standalone workers
 
 - **doc_query** (ProcessorWorker + DuckDBQueryBackend) — Not part of the pipeline. Accepts structured query requests against the DuckDB database. Supports 5 actions: `search` (full-text via DuckDB FTS), `filter` (by document_type, has_tables, page range), `stats` (aggregate counts/averages), `get` (single document by ID), `vector_search` (semantic similarity via embeddings).
 
+## I/O contracts
+
+Worker I/O schemas are defined as Pydantic models in `src/docman/contracts.py`. Worker YAML configs reference them via `input_schema_ref` / `output_schema_ref`, and Loom's `resolve_schema_refs()` converts them to JSON Schema at load time.
+
+Models: `ExtractorInput`, `ExtractorOutput`, `ClassifierInput`, `ClassifierOutput`, `SummarizerInput`, `SummarizerOutput`, `IngestInput`, `IngestOutput`, `QueryInput`, `QueryOutput`.
+
 ## Data flow
 
 - Large data passes via **file references** in a shared workspace directory (`--workspace-dir`)
 - Messages carry only file_ref strings, not inline content
-- DoclingBackend reads source file from workspace, writes extracted JSON to workspace
-- **Summarizer file resolution:** Loom's LLMWorker now supports `resolve_file_refs` — adding `resolve_file_refs: ["file_ref"]` and `workspace_dir` to the summarizer config would allow it to read extracted text from workspace automatically. This is not yet wired in the current config but the Loom capability exists.
+- Extraction backends (MarkItDown, Docling) read source file from workspace, write extracted JSON to workspace
+- **Summarizer file resolution:** `resolve_file_refs: ["file_ref"]` and `workspace_dir` are set in the summarizer config — Loom's LLMWorker reads extracted JSON from workspace automatically.
 
 ## Docling configuration
 
@@ -112,7 +136,8 @@ See Loom's [Building Workflows](https://github.com/IranTransitionProject/loom/bl
 
 ## Key design rules
 
-- DoclingBackend runs Docling synchronously in a thread pool (`asyncio.run_in_executor`)
+- All extraction backends extend `SyncProcessingBackend` — synchronous work runs in a thread pool (`asyncio.run_in_executor`)
+- SmartExtractorBackend creates inner backends lazily — importing docman does not pull in torch or markitdown
 - DuckDB backends also run synchronously via `SyncProcessingBackend` (DuckDB is synchronous)
 - Path traversal validation: file_ref must resolve within workspace_dir
 - `text_preview` (first ~500 words) is included inline in extractor output so the classifier doesn't need file access
@@ -153,31 +178,30 @@ uv run pytest tests/ -v
 ## Current state
 
 The following items are **implemented and working**:
-- DoclingBackend (`src/docman/backends/docling_backend.py`) — complete with path traversal validation, configurable Docling tuning via backend_config, proper error handling (DoclingConversionError), production-quality docstrings
-- DuckDBIngestBackend (`src/docman/backends/duckdb_ingest.py`) — persists pipeline results to DuckDB with auto-schema creation, full-text storage from workspace, FTS index, optional vector embedding generation via Ollama. Uses `serialize_writes=True` for safe concurrent pipeline execution (asyncio.Lock prevents concurrent DuckDB writes)
-- DocmanQueryBackend (`src/docman/backends/duckdb_query.py`) — thin subclass of `loom.contrib.duckdb.DuckDBQueryBackend` with Docman document schema defaults (columns, filters, stats aggregates). Backward-compat alias `DuckDBQueryBackend = DocmanQueryBackend` for existing YAML configs.
-- DuckDBVectorTool (`src/docman/tools/vector_search.py`) — thin wrapper around `loom.contrib.duckdb.DuckDBVectorTool` with Docman-specific table, columns, and tool name defaults
-- Worker configs for all 4 pipeline stages + standalone query worker with I/O schemas — complete
-- Pipeline configs (`configs/orchestrators/doc_pipeline.yaml`, `doc_pipeline_local.yaml`) — 4-stage pipeline complete
-- Unit tests: 63 tests pass (DoclingBackend, DuckDB ingest, query wrapper defaults, vector search wrapper defaults, converter branch coverage, embedding truncation/error handling). Core DuckDB logic (64 tests) now tested in LOOM.
-- App manifest (`manifest.yaml`) — declares configs, Python package, and required Loom extras for Workshop deployment
-- Build script (`scripts/build-app.sh`) — generates `dist/docman-0.4.0.zip` for deployment via Loom Workshop
+
+- Pydantic I/O contracts (`src/docman/contracts.py`) — source of truth for all worker schemas, resolved at load time via Loom's `resolve_schema_refs()`
+- MarkItDownBackend (`src/docman/backends/markitdown_backend.py`) — fast extraction via Microsoft MarkItDown, derives metadata from Markdown output
+- SmartExtractorBackend (`src/docman/backends/smart_extractor.py`) — composite MarkItDown-first with Docling fallback, configurable thresholds
+- DoclingBackend (`src/docman/backends/docling_backend.py`) — deep extraction with OCR, table structure, layout analysis
+- DuckDBIngestBackend (`src/docman/backends/duckdb_ingest.py`) — persists pipeline results to DuckDB with auto-schema creation, FTS index, optional vector embeddings
+- DocmanQueryBackend (`src/docman/backends/duckdb_query.py`) — thin subclass with Docman document schema defaults
+- DuckDBVectorTool (`src/docman/tools/vector_search.py`) — thin wrapper with Docman-specific defaults
+- Worker configs for all pipeline stages + standalone query worker — using `input_schema_ref`/`output_schema_ref`
+- Pipeline configs: `doc_pipeline.yaml` (Docling), `doc_pipeline_local.yaml` (all local), `doc_pipeline_smart.yaml` (MarkItDown-first)
+- App manifest (`manifest.yaml`) — declares all configs, Python package, and required Loom extras
+- Build script (`scripts/build-app.sh`) — generates deployment ZIP for Loom Workshop
 
 ## What to implement next
 
-1. **Wire summarizer file_ref resolution** — Add `resolve_file_refs: ["file_ref"]` and `workspace_dir` to `doc_summarizer.yaml` (Loom now supports this natively)
-2. **End-to-end test** — With NATS, Redis, and Ollama running locally
-3. **Design a parallel pipeline variant** — Current pipeline is inherently sequential, but a variant could run classify and summarize concurrently if the summarizer doesn't need `document_type` (Loom's pipeline parallelism would auto-detect this from input_mapping)
-4. **MCP progress notifications** — When Loom's MCP bridge wires progress callbacks to MCP progress tokens, Docman's pipeline would automatically report per-stage progress to MCP clients
-
-## Known issues
-
-- The summarizer config doesn't yet use Loom's `resolve_file_refs` to read extracted text from workspace (see Data flow section). The Loom capability exists; it just needs to be wired in the config.
+1. **End-to-end test** — With NATS, Redis, and Ollama running locally
+2. **Design a parallel pipeline variant** — Current pipeline is inherently sequential, but a variant could run classify and summarize concurrently if the summarizer doesn't need `document_type` (Loom's pipeline parallelism would auto-detect this from input_mapping)
+3. **MCP progress notifications** — When Loom's MCP bridge wires progress callbacks to MCP progress tokens, Docman's pipeline would automatically report per-stage progress to MCP clients
 
 ## Environment
 
 - Apple Silicon Mac
 - Python >=3.11 (pyproject.toml), recommend 3.13 for compatibility
-- Docling >=2.0.0 for document extraction (pulls torch, torchvision)
+- MarkItDown >=0.1.0 for fast document extraction (lightweight, no ML)
+- Docling >=2.0.0 for deep document extraction (pulls torch, torchvision)
 - DuckDB >=1.0.0 for embedded analytics database
 - Ollama for local LLM tier (llama3.2:3b recommended)

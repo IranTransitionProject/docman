@@ -18,50 +18,5 @@ backend_config:
 default_model_tier: "local"
 timeout_seconds: 30
 
-input_schema:
-  type: "object"
-  required: ["action"]
-  properties:
-    action:
-      type: "string"
-      description: "Query action: search, filter, stats, get, or vector_search"
-    query:
-      type: "string"
-      description: "Search query text (for 'search' action)"
-    document_id:
-      type: "string"
-      description: "Document UUID (for 'get' action)"
-    document_type:
-      type: "string"
-      description: "Filter by document type (for 'filter' action)"
-    has_tables:
-      type: "boolean"
-      description: "Filter by table presence (for 'filter' action)"
-    min_pages:
-      type: "integer"
-      description: "Minimum page count filter (for 'filter' action)"
-    max_pages:
-      type: "integer"
-      description: "Maximum page count filter (for 'filter' action)"
-    group_by:
-      type: "string"
-      description: "Column to group by (for 'stats' action, default: document_type)"
-    limit:
-      type: "integer"
-      description: "Maximum results to return (default: 20, max: 100)"
-    embedding:
-      type: "object"
-      description: "Embedding config for vector_search (model, ollama_url)"
-
-output_schema:
-  type: "object"
-  properties:
-    results:
-      type: "array"
-      description: "List of matching documents or aggregated stats"
-    total:
-      type: "integer"
-      description: "Total matching count"
-    document:
-      type: "object"
-      description: "Single document record (for 'get' action)"
+input_schema_ref: "docman.contracts.QueryInput"
+output_schema_ref: "docman.contracts.QueryOutput"

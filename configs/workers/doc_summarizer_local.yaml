@@ -35,24 +35,5 @@ system_prompt: |
   - letter/memo: Focus on purpose, key requests, action items
   - Other types: Provide a general comprehensive summary
 
-input_schema:
-  type: "object"
-  required: ["file_ref", "document_type"]
-  properties:
-    file_ref:
-      type: "string"
-      description: "Filename of extracted JSON in workspace (contains full text)"
-    document_type:
-      type: "string"
-      description: "Classified document type from previous stage"
-
-output_schema:
-  type: "object"
-  required: ["summary", "key_points", "word_count"]
-  properties:
-    summary:
-      type: "string"
-    key_points:
-      type: "array"
-    word_count:
-      type: "integer"
+input_schema_ref: "docman.contracts.SummarizerInput"
+output_schema_ref: "docman.contracts.SummarizerOutput"

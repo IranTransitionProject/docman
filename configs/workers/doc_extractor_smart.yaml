@@ -1,8 +1,8 @@
-# Document extractor — stage 1 of the doc_pipeline.
-# This is a PROCESSOR worker (not LLM). It runs DoclingBackend to extract
-# text, tables, and structure from PDF/DOCX files.
+# Smart document extractor — stage 1 of the doc_pipeline.
+# Tries MarkItDown first (fast, no ML) and falls back to Docling (OCR,
+# table structure) when the fast path produces insufficient text.
 #
-# Run with:  loom processor --config configs/workers/doc_extractor.yaml \
+# Run with:  loom processor --config configs/workers/doc_extractor_smart.yaml \
 #                           --nats-url nats://localhost:4222 \
 #                           --workspace-dir /tmp/docman-workspace
 # Subscribes to: loom.tasks.doc_extractor.local
@@ -12,18 +12,22 @@
 
 name: "doc_extractor"
 worker_kind: "processor"
-processing_backend: "docman.backends.docling_backend.DoclingBackend"
+processing_backend: "docman.backends.smart_extractor.SmartExtractorBackend"
 backend_config:
   workspace_dir: "/tmp/docman-workspace"
-  # Docling tuning options (see docs/docling-setup.md for full reference)
-  # These are read by DoclingBackend._build_converter()
-  device: "mps"              # "auto" | "cpu" | "mps" | "cuda" — use "mps" on Apple Silicon
+
+  # --- Smart extractor settings ---
+  min_text_length: 50            # Fallback to Docling if extracted text < this many chars
+  force_docling_extensions: []   # Always use Docling for these extensions (e.g., [".tiff"])
+
+  # --- Docling fallback settings (used only when Docling runs) ---
+  device: "mps"              # "auto" | "cpu" | "mps" | "cuda"
   num_threads: 8             # M1 Pro has 8 performance cores
   ocr_engine: "ocrmac"       # "ocrmac" (macOS native) | "easyocr" | "tesseract"
   do_ocr: true               # Enable OCR for scanned PDFs
   do_table_structure: true   # Enable table structure recognition
-  layout_batch_size: 4       # Pages per batch for layout detection (4-8 safe on 32GB)
-  ocr_batch_size: 4          # Pages per batch for OCR (4-8 safe on 32GB)
+  layout_batch_size: 4
+  ocr_batch_size: 4
 
 default_model_tier: "local"
 timeout_seconds: 120

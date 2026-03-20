@@ -24,52 +24,5 @@ backend_config:
 default_model_tier: "local"
 timeout_seconds: 30
 
-input_schema:
-  type: "object"
-  required: ["source_file"]
-  properties:
-    source_file:
-      type: "string"
-      description: "Original filename of the source document"
-    file_ref:
-      type: "string"
-      description: "Filename of extracted JSON in workspace (from extractor)"
-    page_count:
-      type: "integer"
-    has_tables:
-      type: "boolean"
-    sections:
-      type: "array"
-      description: "Section headers found in document"
-    text_preview:
-      type: "string"
-      description: "First ~500 words of extracted text"
-    document_type:
-      type: "string"
-      description: "Classification result (from classifier)"
-    classification_confidence:
-      type: "number"
-    classification_reasoning:
-      type: "string"
-    summary:
-      type: "string"
-      description: "Document summary (from summarizer)"
-    key_points:
-      type: "array"
-      description: "Key points extracted by summarizer"
-    word_count:
-      type: "integer"
-
-output_schema:
-  type: "object"
-  required: ["document_id", "status", "source_file"]
-  properties:
-    document_id:
-      type: "string"
-      description: "UUID assigned to the ingested document"
-    status:
-      type: "string"
-      description: "Ingestion status (inserted)"
-    source_file:
-      type: "string"
-      description: "Original filename echoed back"
+input_schema_ref: "docman.contracts.IngestInput"
+output_schema_ref: "docman.contracts.IngestOutput"
