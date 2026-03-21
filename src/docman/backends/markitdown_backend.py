@@ -95,9 +95,7 @@ class MarkItDownBackend(SyncProcessingBackend):
         except MarkItDownConversionError:
             raise
         except Exception as exc:
-            raise MarkItDownConversionError(
-                f"Failed to extract '{file_ref}': {exc}"
-            ) from exc
+            raise MarkItDownConversionError(f"Failed to extract '{file_ref}': {exc}") from exc
 
         return {"output": result, "model_used": "markitdown"}
 
@@ -122,8 +120,7 @@ class MarkItDownBackend(SyncProcessingBackend):
             from markitdown import MarkItDown
         except ImportError as exc:
             raise MarkItDownConversionError(
-                "markitdown package is not installed. "
-                "Install with: pip install markitdown"
+                "markitdown package is not installed. Install with: pip install markitdown"
             ) from exc
 
         try:

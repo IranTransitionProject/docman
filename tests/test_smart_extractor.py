@@ -84,9 +84,7 @@ class TestMarkItDownAccepted:
 
     def test_markitdown_exactly_at_threshold(self, backend):
         mock_md = MagicMock()
-        mock_md.process_sync.return_value = _markitdown_result(
-            text_preview="x" * 50
-        )
+        mock_md.process_sync.return_value = _markitdown_result(text_preview="x" * 50)
         backend._markitdown = mock_md
 
         mock_docling = MagicMock()
@@ -142,9 +140,7 @@ class TestFallbackInsufficientText:
 
     def test_whitespace_only_triggers_fallback(self, backend):
         mock_md = MagicMock()
-        mock_md.process_sync.return_value = _markitdown_result(
-            text_preview="   \n\t  "
-        )
+        mock_md.process_sync.return_value = _markitdown_result(text_preview="   \n\t  ")
         backend._markitdown = mock_md
 
         mock_docling = MagicMock()
@@ -250,9 +246,7 @@ class TestConfiguration:
 
     def test_default_min_text_length_is_50(self, backend):
         mock_md = MagicMock()
-        mock_md.process_sync.return_value = _markitdown_result(
-            text_preview="x" * 60
-        )
+        mock_md.process_sync.return_value = _markitdown_result(text_preview="x" * 60)
         backend._markitdown = mock_md
 
         mock_docling = MagicMock()

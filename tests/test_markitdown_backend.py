@@ -156,9 +156,7 @@ class TestMetadataDerivation:
         (workspace / "doc.pdf").write_bytes(b"%PDF")
 
         mock_result = MagicMock()
-        mock_result.text_content = (
-            "# Data\n\n| Name | Value |\n| --- | --- |\n| A | 1 |\n"
-        )
+        mock_result.text_content = "# Data\n\n| Name | Value |\n| --- | --- |\n| A | 1 |\n"
         mock_md_cls.return_value.convert.return_value = mock_result
 
         result = backend.process_sync(

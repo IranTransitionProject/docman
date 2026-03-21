@@ -37,9 +37,7 @@ class ExtractorOutput(BaseModel):
     file_ref: str = Field(..., description="Filename of extracted JSON in workspace")
     page_count: int = Field(..., description="Number of pages detected")
     has_tables: bool = Field(..., description="Whether tables were found")
-    sections: list[str] = Field(
-        ..., description="Section headers found in document (max 20)"
-    )
+    sections: list[str] = Field(..., description="Section headers found in document (max 20)")
     text_preview: str = Field(..., description="First ~500 words of extracted text")
 
 
@@ -91,9 +89,7 @@ class SummarizerInput(BaseModel):
     file_ref: str = Field(
         ..., description="Filename of extracted JSON in workspace (contains full text)"
     )
-    document_type: str = Field(
-        ..., description="Classified document type from previous stage"
-    )
+    document_type: str = Field(..., description="Classified document type from previous stage")
 
 
 class SummarizerOutput(BaseModel):
@@ -121,17 +117,11 @@ class IngestInput(BaseModel):
     sections: list[str] | None = Field(
         default=None, description="Section headers found in document"
     )
-    text_preview: str | None = Field(
-        default=None, description="First ~500 words of extracted text"
-    )
-    document_type: str | None = Field(
-        default=None, description="Classification result"
-    )
+    text_preview: str | None = Field(default=None, description="First ~500 words of extracted text")
+    document_type: str | None = Field(default=None, description="Classification result")
     classification_confidence: float | None = None
     classification_reasoning: str | None = None
-    summary: str | None = Field(
-        default=None, description="Document summary from summarizer"
-    )
+    summary: str | None = Field(default=None, description="Document summary from summarizer")
     key_points: list[str] | None = Field(
         default=None, description="Key points extracted by summarizer"
     )
@@ -157,18 +147,10 @@ class QueryInput(BaseModel):
     action: Literal["search", "filter", "stats", "get", "vector_search"] = Field(
         ..., description="Query action"
     )
-    query: str | None = Field(
-        default=None, description="Search query text (for 'search' action)"
-    )
-    document_id: str | None = Field(
-        default=None, description="Document UUID (for 'get' action)"
-    )
-    document_type: str | None = Field(
-        default=None, description="Filter by document type"
-    )
-    has_tables: bool | None = Field(
-        default=None, description="Filter by table presence"
-    )
+    query: str | None = Field(default=None, description="Search query text (for 'search' action)")
+    document_id: str | None = Field(default=None, description="Document UUID (for 'get' action)")
+    document_type: str | None = Field(default=None, description="Filter by document type")
+    has_tables: bool | None = Field(default=None, description="Filter by table presence")
     min_pages: int | None = Field(default=None, description="Minimum page count filter")
     max_pages: int | None = Field(default=None, description="Maximum page count filter")
     group_by: str | None = Field(
