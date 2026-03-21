@@ -18,7 +18,7 @@ and pipeline definitions. The Loom framework itself lives in a separate repo.
 
 ## Source Tree
 
-```
+```text
 src/docman/
 ├── backends/
 │   ├── docling_backend.py    # DoclingBackend — PDF/DOCX extraction via Docling
@@ -68,7 +68,7 @@ auto-infers dependencies from `input_mapping` paths and runs independent stages
 concurrently. In Docman's case, each stage depends on the previous one, so
 execution remains sequential:
 
-```
+```text
 PDF/DOCX → [Extract] → [Classify] → [Summarize] → [Ingest] → DuckDB
            Level 0      Level 1      Level 2       Level 3
 ```
@@ -199,6 +199,7 @@ Docman depends on `loom[duckdb]` as a package and uses these Loom components:
 | `MCPGateway` | Exposes Docman as MCP server via `configs/mcp/docman.yaml` |
 
 The CLI loads backends by fully qualified class path from worker configs:
+
 ```yaml
 processing_backend: "docman.backends.docling_backend.DoclingBackend"
 ```

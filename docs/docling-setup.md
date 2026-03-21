@@ -231,6 +231,7 @@ for result in results:
 ### Troubleshooting
 
 **MPS not available:**
+
 ```python
 import torch
 print(torch.backends.mps.is_available())
@@ -238,6 +239,7 @@ print(torch.backends.mps.is_available())
 ```
 
 **Model download failures:**
+
 ```bash
 # Clear cache and retry
 rm -rf ~/.cache/docling/models/
@@ -245,11 +247,13 @@ docling-tools models download
 ```
 
 **Out of memory on large PDFs:**
+
 - Reduce `layout_batch_size` and `ocr_batch_size` to 1-2
 - Process fewer pages at a time
 - Close other memory-intensive applications
 
 **Slow first run:**
+
 - Models are downloaded and compiled on first use. Subsequent runs will be faster.
 - Pre-download models with `docling-tools models download`.
 
@@ -279,6 +283,7 @@ docling-tools models download
 The `DoclingBackend` in `src/docman/backends/docling_backend.py` uses Docling's `DocumentConverter`. To apply the M1 Pro optimized settings, either:
 
 1. **Set environment variables** before running the extractor:
+
    ```bash
    export DOCLING_DEVICE=mps
    export DOCLING_NUM_THREADS=8
@@ -288,6 +293,7 @@ The `DoclingBackend` in `src/docman/backends/docling_backend.py` uses Docling's 
    ```
 
 2. **Configure via backend_config** in `doc_extractor.yaml`:
+
    ```yaml
    backend_config:
      workspace_dir: "/tmp/docman-workspace"
@@ -297,6 +303,7 @@ The `DoclingBackend` in `src/docman/backends/docling_backend.py` uses Docling's 
      layout_batch_size: 4
      ocr_batch_size: 4
    ```
+
    *(Requires DoclingBackend to read these config values — see updated backend code.)*
 
 3. **Modify DoclingBackend directly** to hardcode optimized defaults for your environment.

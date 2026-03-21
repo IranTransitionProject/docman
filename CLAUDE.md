@@ -8,7 +8,7 @@ This is a **consumer** of the Loom framework — it provides concrete worker con
 
 ## Project structure
 
-```
+```text
 src/docman/
   contracts.py           # Pydantic I/O models — source of truth for worker schemas
   backends/
@@ -40,6 +40,7 @@ tests/            # Unit tests (mock backends, in-memory DuckDB, no infrastructu
 ## Relationship to Loom
 
 Docman depends on `loom[duckdb]` as a package. It uses:
+
 - `ProcessingBackend` ABC — DoclingBackend, MarkItDownBackend, SmartExtractorBackend, DuckDBIngestBackend implement this
 - `resolve_schema_refs()` — worker configs use `input_schema_ref` / `output_schema_ref` pointing to `docman.contracts.*` Pydantic models (Loom resolves to JSON Schema at load time)
 - `loom.contrib.duckdb.DuckDBQueryBackend` — DocmanQueryBackend subclasses this with Docman-specific schema defaults
@@ -50,6 +51,7 @@ Docman depends on `loom[duckdb]` as a package. It uses:
 - `PipelineOrchestrator` — orchestrates the 4-stage pipeline via `loom pipeline` CLI (with dependency-aware parallel stage execution)
 
 The CLI loads backends by fully qualified class path from worker configs:
+
 ```yaml
 processing_backend: "docman.backends.smart_extractor.SmartExtractorBackend"
 ```
@@ -78,6 +80,7 @@ Docman provides three extraction backends, all producing the same output contrac
 - `doc_pipeline_smart.yaml` — Smart extraction (MarkItDown-first, standard-tier summarizer)
 
 **Scaling note:** To process multiple documents concurrently, run multiple pipeline orchestrator instances. NATS queue groups automatically load-balance across replicas:
+
 ```bash
 # Process 3 documents concurrently — each instance handles one goal
 loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
@@ -128,6 +131,7 @@ loom mcp --config configs/mcp/docman.yaml --transport streamable-http --port 800
 ```
 
 The MCP config (`configs/mcp/docman.yaml`) maps Docman's workers and query backend to MCP tools:
+
 - Pipeline → `process_document` tool (full extract → classify → summarize → ingest)
 - Query backend → `docman_search`, `docman_filter`, `docman_stats`, `docman_get` tools
 - Workspace files exposed as MCP resources

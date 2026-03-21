@@ -823,7 +823,7 @@ wheels = [
 
 [[package]]
 name = "loom"
-version = "0.6.0"
+version = "0.8.0"
 source = { editable = "../loom" }
 dependencies = [
     { name = "click" },

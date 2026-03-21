@@ -156,6 +156,7 @@ docker ps
 You should see two containers: `loom-nats` and `loom-redis`.
 
 > **Note:** These containers will stop if you restart your Mac. To start them again later:
+>
 > ```bash
 > docker start loom-nats loom-redis
 > ```
@@ -181,10 +182,12 @@ git clone https://github.com/IranTransitionProject/framework.git
 ```
 
 > **Note:** If these are private repositories, you'll need to authenticate with GitHub first. The simplest way:
+>
 > ```bash
 > brew install gh
 > gh auth login
 > ```
+>
 > Follow the prompts to log in with your GitHub account.
 
 ---
@@ -308,11 +311,14 @@ Press **Ctrl + C** to stop watching logs.
 Workers are defined by YAML configuration files. To create a new one:
 
 1. Copy an existing worker config:
+
    ```bash
    cp configs/workers/doc_classifier.yaml configs/workers/my_new_worker.yaml
    ```
+
 2. Edit the file to define your worker's system prompt, input/output schemas, and behavior
 3. Start it:
+
    ```bash
    uv run loom worker --config configs/workers/my_new_worker.yaml --tier local --nats-url nats://localhost:4222
    ```
@@ -326,6 +332,7 @@ Processing backends handle non-LLM tasks (like document extraction). To create o
 1. Create a new Python file in `docman/src/docman/backends/`
 2. Implement the `ProcessingBackend` interface from Loom
 3. Reference it in a worker config:
+
    ```yaml
    processing_backend: "docman.backends.my_backend.MyBackend"
    ```
@@ -399,7 +406,7 @@ The first time Docling processes a document, it may take longer while PyTorch co
 
 For those who want to understand how the pieces fit together:
 
-```
+```text
 You submit a document (PDF/DOCX)
         │
         ▼

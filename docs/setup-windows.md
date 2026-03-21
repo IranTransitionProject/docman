@@ -47,7 +47,7 @@ Windows Terminal is the modern command-line application for Windows 11.
 You should see a PowerShell window with a blinking cursor. This is where you'll type all commands.
 
 > **If you don't see Terminal:** Open the Microsoft Store, search for "Windows Terminal", and install it.
-
+>
 > **Important:** Some commands in this guide need administrator access. If a command fails with "Access denied", close Terminal and reopen it by right-clicking the Start button and choosing **Terminal (Admin)**.
 
 ---
@@ -100,7 +100,7 @@ python --version
 You should see `Python 3.13.x`.
 
 > **Note:** On Windows, the command is `python` (not `python3` as on macOS/Linux).
-
+>
 > **If you see the Microsoft Store open instead:** Windows sometimes redirects the `python` command to the Store. After installing Python via winget, close Terminal completely, reopen it, and try again.
 
 ---
@@ -192,6 +192,7 @@ docker ps
 You should see two containers: `loom-nats` and `loom-redis`.
 
 > **Note:** These containers stop when you restart your PC or close Docker Desktop. To start them again:
+>
 > ```powershell
 > docker start loom-nats loom-redis
 > ```
@@ -212,10 +213,12 @@ git clone https://github.com/IranTransitionProject/framework.git
 ```
 
 > **Note:** If these are private repositories, you'll need to authenticate with GitHub first:
+>
 > ```powershell
 > winget install GitHub.cli
 > gh auth login
 > ```
+>
 > Follow the prompts to log in with your GitHub account.
 
 ---
@@ -238,9 +241,11 @@ uv sync --extra dev
 This will download and install many packages (including PyTorch for document processing). This is the longest step — it may take 10–15 minutes.
 
 > **Note for NVIDIA GPU owners:** By default, uv installs CPU-only PyTorch on Windows. To enable GPU acceleration for Docling's document layout detection, install the CUDA version instead:
+>
 > ```powershell
 > uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
 > ```
+>
 > Run this *before* `uv sync --extra dev`. If you don't have an NVIDIA GPU, skip this — CPU works fine, just slower.
 
 Verify installation:
@@ -344,11 +349,14 @@ Press **Ctrl + C** to stop watching logs.
 Workers are defined by YAML configuration files. To create a new one:
 
 1. Copy an existing worker config:
+
    ```powershell
    Copy-Item configs\workers\doc_classifier.yaml configs\workers\my_new_worker.yaml
    ```
+
 2. Edit the file in any text editor (Notepad, VS Code, etc.) to define your worker's system prompt, input/output schemas, and behavior
 3. Start it:
+
    ```powershell
    uv run loom worker --config configs\workers\my_new_worker.yaml --tier local --nats-url nats://localhost:4222
    ```
@@ -362,6 +370,7 @@ Processing backends handle non-LLM tasks (like document extraction). To create o
 1. Create a new Python file in `docman\src\docman\backends\`
 2. Implement the `ProcessingBackend` interface from Loom
 3. Reference it in a worker config:
+
    ```yaml
    processing_backend: "docman.backends.my_backend.MyBackend"
    ```
@@ -468,7 +477,7 @@ Most official Docker images include ARM support, but some community images don't
 
 For those who want to understand how the pieces fit together:
 
-```
+```text
 You submit a document (PDF/DOCX)
         |
         v
