@@ -11,7 +11,7 @@ No prior developer experience is assumed. If you already have some of these tool
 - **Python 3.13** — the programming language everything runs on
 - **uv** — fast Python package manager (replaces pip and venv)
 - **Git** — version control for downloading and contributing to the code
-- **OrbStack** — lightweight container runtime (runs NATS message broker and Redis)
+- **OrbStack** — lightweight container runtime (runs NATS message broker and Valkey)
 - **Ollama** — runs AI models locally on your Mac
 - **Loom** — the orchestration framework
 - **Docman** — the document processing pipeline you'll be testing
@@ -140,7 +140,7 @@ You should see `command-r7b:latest` in the list.
 
 ## Step 6: Start infrastructure containers
 
-Docman needs two services running: NATS (a message broker) and Redis (a data store).
+Docman needs two services running: NATS (a message broker) and Valkey (a data store).
 
 ```bash
 docker run -d --name loom-nats -p 4222:4222 nats:2.10-alpine
@@ -380,7 +380,7 @@ Make sure Homebrew's Python is installed: `brew install python@3.13`
 
 Use `uv run loom` instead of bare `loom`, or activate the venv: `source .venv/bin/activate`
 
-### NATS or Redis container not running
+### NATS or Valkey container not running
 
 ```bash
 docker start loom-nats loom-redis

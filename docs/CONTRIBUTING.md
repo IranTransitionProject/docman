@@ -53,7 +53,7 @@ schemas. Do not combine multiple processing steps into one worker.
 
 **Test coverage:**
 All new functionality must include unit tests. Tests must pass without
-infrastructure (NATS, Redis, Ollama, DuckDB on disk). Use in-memory DuckDB
+infrastructure (NATS, Valkey, Ollama, DuckDB on disk). Use in-memory DuckDB
 and mocked backends for testing.
 
 ---

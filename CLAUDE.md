@@ -197,7 +197,7 @@ The following items are **implemented and working**:
 
 ## What to implement next
 
-1. **End-to-end test** — With NATS, Redis, and Ollama running locally
+1. **End-to-end test** — With NATS, Valkey, and Ollama running locally
 2. **Design a parallel pipeline variant** — Current pipeline is inherently sequential, but a variant could run classify and summarize concurrently if the summarizer doesn't need `document_type` (Loom's pipeline parallelism would auto-detect this from input_mapping)
 3. **MCP progress notifications** — When Loom's MCP bridge wires progress callbacks to MCP progress tokens, Docman's pipeline would automatically report per-stage progress to MCP clients
 

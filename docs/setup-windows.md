@@ -11,7 +11,7 @@ No prior developer experience is assumed. If you already have some of these tool
 - **Python 3.13** — the programming language everything runs on
 - **uv** — fast Python package manager (replaces pip and venv)
 - **Git** — version control for downloading and contributing to the code
-- **Docker Desktop** — runs NATS (message broker) and Redis (data store) in containers
+- **Docker Desktop** — runs NATS (message broker) and Valkey (data store) in containers
 - **Ollama** — runs AI models locally on your PC
 - **Loom** — the orchestration framework
 - **Docman** — the document processing pipeline you'll be testing
@@ -107,7 +107,7 @@ You should see `Python 3.13.x`.
 
 ## Step 5: Install Docker Desktop
 
-Docker Desktop runs containers (small isolated environments) on your PC. We use it for NATS and Redis.
+Docker Desktop runs containers (small isolated environments) on your PC. We use it for NATS and Valkey.
 
 ### 5a: Enable WSL2
 
