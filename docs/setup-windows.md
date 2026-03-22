@@ -180,7 +180,7 @@ Make sure Docker Desktop is running (check for its icon in the system tray), the
 
 ```powershell
 docker run -d --name loom-nats -p 4222:4222 nats:2.10-alpine
-docker run -d --name loom-redis -p 6379:6379 redis:7-alpine
+docker run -d --name loom-valkey -p 6379:6379 valkey/valkey:8-alpine
 ```
 
 Verify they're running:
@@ -189,12 +189,12 @@ Verify they're running:
 docker ps
 ```
 
-You should see two containers: `loom-nats` and `loom-redis`.
+You should see two containers: `loom-nats` and `loom-valkey`.
 
 > **Note:** These containers stop when you restart your PC or close Docker Desktop. To start them again:
 >
 > ```powershell
-> docker start loom-nats loom-redis
+> docker start loom-nats loom-valkey
 > ```
 
 ---

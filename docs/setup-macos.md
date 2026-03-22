@@ -144,7 +144,7 @@ Docman needs two services running: NATS (a message broker) and Valkey (a data st
 
 ```bash
 docker run -d --name loom-nats -p 4222:4222 nats:2.10-alpine
-docker run -d --name loom-redis -p 6379:6379 redis:7-alpine
+docker run -d --name loom-valkey -p 6379:6379 valkey/valkey:8-alpine
 ```
 
 Verify they're running:
@@ -153,12 +153,12 @@ Verify they're running:
 docker ps
 ```
 
-You should see two containers: `loom-nats` and `loom-redis`.
+You should see two containers: `loom-nats` and `loom-valkey`.
 
 > **Note:** These containers will stop if you restart your Mac. To start them again later:
 >
 > ```bash
-> docker start loom-nats loom-redis
+> docker start loom-nats loom-valkey
 > ```
 
 ---
@@ -383,7 +383,7 @@ Use `uv run loom` instead of bare `loom`, or activate the venv: `source .venv/bi
 ### NATS or Valkey container not running
 
 ```bash
-docker start loom-nats loom-redis
+docker start loom-nats loom-valkey
 ```
 
 If they don't exist yet, re-run the `docker run` commands from Step 6.
