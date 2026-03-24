@@ -16,6 +16,10 @@ dev = [
     "pytest-cov>=5.0.0",
     "ruff>=0.3.0",
 ]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.24",
+]
 
 [build-system]
 requires = ["hatchling"]
