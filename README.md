@@ -58,7 +58,7 @@ to study or fork.
 | Worker configs (5 workers) | Complete |
 | Pipeline configs (standard + local tier) | Complete |
 | MCP gateway config | Complete |
-| Unit tests | 63 passing |
+| Unit tests | 124 passing |
 | Summarizer file-ref resolution | Config pending (Loom support exists) |
 
 ---
@@ -68,7 +68,7 @@ to study or fork.
 ```bash
 # Requires Python 3.11+ and uv (https://docs.astral.sh/uv/)
 uv sync --extra dev
-uv run pytest tests/ -v   # 63 tests, no infrastructure needed
+uv run pytest tests/ -v   # 124 tests, no infrastructure needed
 ```
 
 For full environment setup with Docling, Ollama, NATS, and the complete

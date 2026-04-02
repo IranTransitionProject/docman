@@ -39,7 +39,7 @@ tests/            # Unit tests (mock backends, in-memory DuckDB, no infrastructu
 
 ## Relationship to Loom
 
-Docman depends on `loom[duckdb]` as a package. It uses:
+Docman depends on `loom-ai[duckdb]` as a package. It uses:
 
 - `ProcessingBackend` ABC — DoclingBackend, MarkItDownBackend, SmartExtractorBackend, DuckDBIngestBackend implement this
 - `resolve_schema_refs()` — worker configs use `input_schema_ref` / `output_schema_ref` pointing to `docman.contracts.*` Pydantic models (Loom resolves to JSON Schema at load time)

@@ -541,7 +541,7 @@ version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "docling" },
-    { name = "loom", extra = ["duckdb"] },
+    { name = "loom-ai", extra = ["duckdb"] },
     { name = "markitdown" },
 ]
 
@@ -560,7 +560,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "docling", specifier = ">=2.0.0" },
-    { name = "loom", extras = ["duckdb"], editable = "../loom" },
+    { name = "loom-ai", extras = ["duckdb"], editable = "../loom" },
     { name = "markitdown", specifier = ">=0.1.0" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.24" },
@@ -872,8 +872,8 @@ wheels = [
 ]
 
 [[package]]
-name = "loom"
-version = "0.8.0"
+name = "loom-ai"
+version = "0.9.0"
 source = { editable = "../loom" }
 dependencies = [
     { name = "click" },
@@ -903,10 +903,12 @@ requires-dist = [
     { name = "duckdb", marker = "extra == 'rag'", specifier = ">=1.0.0" },
     { name = "duckdb", marker = "extra == 'workshop'", specifier = ">=1.0.0" },
     { name = "fastapi", marker = "extra == 'workshop'", specifier = ">=0.110.0" },
+    { name = "fastmcp", marker = "extra == 'dev'", specifier = ">=3.1" },
+    { name = "fastmcp", marker = "extra == 'mcp'", specifier = ">=3.1" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "jinja2", marker = "extra == 'workshop'", specifier = ">=3.1.0" },
-    { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.20.0" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.20.0" },
+    { name = "lancedb", marker = "extra == 'dev'", specifier = ">=0.15.0" },
+    { name = "lancedb", marker = "extra == 'lancedb'", specifier = ">=0.15.0" },
     { name = "mkdocs-material", marker = "extra == 'dev'", specifier = ">=9.5" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'dev'", specifier = ">=0.24" },
@@ -914,9 +916,12 @@ requires-dist = [
     { name = "nats-py", specifier = ">=2.7.0" },
     { name = "nats-py", marker = "extra == 'tui'", specifier = ">=2.7.0" },
     { name = "ollama", marker = "extra == 'local'", specifier = ">=0.3.0" },
+    { name = "openai", marker = "extra == 'chatbridge'", specifier = ">=1.0.0" },
     { name = "opentelemetry-api", marker = "extra == 'otel'", specifier = ">=1.20.0" },
     { name = "opentelemetry-exporter-otlp", marker = "extra == 'otel'", specifier = ">=1.20.0" },
     { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.20.0" },
+    { name = "pyarrow", marker = "extra == 'dev'", specifier = ">=15.0.0" },
+    { name = "pyarrow", marker = "extra == 'lancedb'", specifier = ">=15.0.0" },
     { name = "pydantic", specifier = ">=2.5.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
@@ -928,12 +933,13 @@ requires-dist = [
     { name = "requests", marker = "extra == 'rag'", specifier = ">=2.31.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.3.0" },
     { name = "structlog", specifier = ">=24.1.0" },
+    { name = "telethon", marker = "extra == 'telegram'", specifier = ">=1.36.0" },
     { name = "textual", marker = "extra == 'tui'", specifier = ">=3.0.0" },
     { name = "tiktoken", specifier = ">=0.7.0" },
     { name = "uvicorn", marker = "extra == 'workshop'", specifier = ">=0.27.0" },
     { name = "zeroconf", marker = "extra == 'mdns'", specifier = ">=0.131.0" },
 ]
-provides-extras = ["redis", "local", "docproc", "duckdb", "rag", "scheduler", "mcp", "workshop", "mdns", "otel", "tui", "docs", "eval", "dev"]
+provides-extras = ["redis", "local", "docproc", "duckdb", "rag", "lancedb", "telegram", "scheduler", "mcp", "workshop", "mdns", "otel", "tui", "docs", "eval", "council", "chatbridge", "dev"]
 
 [[package]]
 name = "lxml"
