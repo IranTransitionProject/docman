@@ -11,14 +11,14 @@ Covers three areas:
 
 DoclingBackend extends SyncProcessingBackend, so process_sync() is tested
 directly (no asyncio needed for unit tests). The thread-pool offloading
-is tested via SyncProcessingBackend's own tests in Loom.
+is tested via SyncProcessingBackend's own tests in Heddle.
 """
 
 import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from loom.worker.processor import BackendError
+from heddle.worker.processor import BackendError
 
 from docman.backends.docling_backend import DoclingBackend, DoclingConversionError
 

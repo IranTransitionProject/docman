@@ -2,10 +2,10 @@
 # This is a PROCESSOR worker (not LLM). It runs DoclingBackend to extract
 # text, tables, and structure from PDF/DOCX files.
 #
-# Run with:  loom processor --config configs/workers/doc_extractor.yaml \
+# Run with:  heddle processor --config configs/workers/doc_extractor.yaml \
 #                           --nats-url nats://localhost:4222 \
 #                           --workspace-dir /tmp/docman-workspace
-# Subscribes to: loom.tasks.doc_extractor.local
+# Subscribes to: heddle.tasks.doc_extractor.local
 #
 # NOTE: The docman package must be installed for the processing_backend
 #       class path to resolve. Install with: pip install -e /path/to/docman

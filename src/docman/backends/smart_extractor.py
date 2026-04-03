@@ -44,7 +44,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from loom.worker.processor import SyncProcessingBackend
+from heddle.worker.processor import SyncProcessingBackend
 
 from docman.backends.docling_backend import DoclingBackend
 from docman.backends.markitdown_backend import MarkItDownBackend

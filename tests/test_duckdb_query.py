@@ -2,7 +2,7 @@
 Tests for Docman's DuckDBQueryBackend wrapper — verifies Docman-specific defaults.
 
 Core query backend logic (search, filter, stats, get, vector_search) is tested
-in LOOM (tests/test_contrib_duckdb_query.py). This file tests that the Docman
+in Heddle (tests/test_contrib_duckdb_query.py). This file tests that the Docman
 subclass configures the correct schema-specific defaults and that the
 backward-compat alias works.
 
@@ -12,7 +12,7 @@ Uses DuckDBIngestBackend to populate the database with the real Docman schema.
 import json
 
 import pytest
-from loom.worker.processor import BackendError
+from heddle.worker.processor import BackendError
 
 from docman.backends.duckdb_ingest import DuckDBIngestBackend
 from docman.backends.duckdb_query import DocmanQueryBackend, DuckDBQueryBackend, DuckDBQueryError
@@ -103,10 +103,10 @@ class TestBackwardCompat:
     def test_error_hierarchy(self):
         assert issubclass(DuckDBQueryError, BackendError)
 
-    def test_is_subclass_of_loom_backend(self):
-        from loom.contrib.duckdb import DuckDBQueryBackend as LoomBackend
+    def test_is_subclass_of_heddle_backend(self):
+        from heddle.contrib.duckdb import DuckDBQueryBackend as HeddleBackend
 
-        assert issubclass(DocmanQueryBackend, LoomBackend)
+        assert issubclass(DocmanQueryBackend, HeddleBackend)
 
 
 class TestDocmanDefaults:

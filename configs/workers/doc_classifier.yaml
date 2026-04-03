@@ -2,9 +2,9 @@
 # LLM worker that classifies document type from extracted metadata.
 # Receives text_preview, page_count, has_tables, sections from the extractor.
 #
-# Run with:  loom worker --config configs/workers/doc_classifier.yaml --tier local \
+# Run with:  heddle worker --config configs/workers/doc_classifier.yaml --tier local \
 #                        --nats-url nats://localhost:4222
-# Subscribes to: loom.tasks.doc_classifier.local
+# Subscribes to: heddle.tasks.doc_classifier.local
 # Requires:  OLLAMA_URL env var (for local tier)
 
 name: "doc_classifier"

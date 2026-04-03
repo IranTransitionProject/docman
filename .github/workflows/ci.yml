@@ -22,14 +22,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout loom
+      - name: Checkout heddle
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/loom
-          path: loom
+          repository: getheddle/heddle
+          path: heddle
       - uses: astral-sh/setup-uv@v5
-      # Symlink so [tool.uv.sources] path "../loom" resolves in CI
-      - run: ln -s "$GITHUB_WORKSPACE/loom" "$GITHUB_WORKSPACE/../loom"
+      # Symlink so [tool.uv.sources] path "../heddle" resolves in CI
+      - run: ln -s "$GITHUB_WORKSPACE/heddle" "$GITHUB_WORKSPACE/../heddle"
       - run: uv sync --extra dev
       - run: uv run ruff check src/ tests/
       - run: uv run ruff format --check src/ tests/
@@ -42,19 +42,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Docman depends on loom — check it out and install from source.
-      - name: Checkout loom
+      # Docman depends on heddle — check it out and install from source.
+      - name: Checkout heddle
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/loom
-          path: loom
+          repository: getheddle/heddle
+          path: heddle
 
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Symlink so [tool.uv.sources] path "../loom" resolves in CI
-      - run: ln -s "$GITHUB_WORKSPACE/loom" "$GITHUB_WORKSPACE/../loom"
+      # Symlink so [tool.uv.sources] path "../heddle" resolves in CI
+      - run: ln -s "$GITHUB_WORKSPACE/heddle" "$GITHUB_WORKSPACE/../heddle"
 
       - name: Install dependencies
         run: uv sync --extra dev

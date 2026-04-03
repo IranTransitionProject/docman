@@ -287,7 +287,7 @@ The `DoclingBackend` in `src/docman/backends/docling_backend.py` uses Docling's 
    ```bash
    export DOCLING_DEVICE=mps
    export DOCLING_NUM_THREADS=8
-   loom processor --config configs/workers/doc_extractor.yaml \
+   heddle processor --config configs/workers/doc_extractor.yaml \
                   --nats-url nats://localhost:4222 \
                   --workspace-dir /tmp/docman-workspace
    ```

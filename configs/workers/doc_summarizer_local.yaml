@@ -1,7 +1,7 @@
 # Document summarizer (LOCAL variant) — for testing without Anthropic API.
 # Uses Ollama local tier instead of standard tier.
 #
-# Run with:  OLLAMA_URL=http://localhost:11434 loom worker \
+# Run with:  OLLAMA_URL=http://localhost:11434 heddle worker \
 #              --config configs/workers/doc_summarizer_local.yaml \
 #              --tier local --nats-url nats://localhost:4222
 

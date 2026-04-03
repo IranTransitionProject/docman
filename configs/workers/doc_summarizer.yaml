@@ -2,9 +2,9 @@
 # LLM worker that produces a structured summary based on document type.
 # Receives file_ref (extracted JSON in workspace) and document_type from classifier.
 #
-# Run with:  loom worker --config configs/workers/doc_summarizer.yaml --tier standard \
+# Run with:  heddle worker --config configs/workers/doc_summarizer.yaml --tier standard \
 #                        --nats-url nats://localhost:4222
-# Subscribes to: loom.tasks.doc_summarizer.standard
+# Subscribes to: heddle.tasks.doc_summarizer.standard
 # Requires:  ANTHROPIC_API_KEY env var (standard tier uses Claude Sonnet)
 
 name: "doc_summarizer"

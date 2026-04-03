@@ -1,9 +1,9 @@
 # DocMan 4-stage pipeline — LOCAL ONLY (no Anthropic API required).
 # All stages use the "local" tier via Ollama.
 #
-# Run with:  loom pipeline --config configs/orchestrators/doc_pipeline_local.yaml \
+# Run with:  heddle pipeline --config configs/orchestrators/doc_pipeline_local.yaml \
 #                          --nats-url nats://localhost:4222
-# Submit:    loom submit "Process document" --context file_ref=report.pdf \
+# Submit:    heddle submit "Process document" --context file_ref=report.pdf \
 #                        --nats-url nats://localhost:4222
 
 name: "doc_pipeline"

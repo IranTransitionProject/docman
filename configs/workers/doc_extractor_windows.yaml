@@ -1,7 +1,7 @@
 # Document extractor — Windows variant.
 # Uses CPU device and EasyOCR instead of MPS/ocrmac (macOS-only).
 #
-# Run with:  loom processor --config configs/workers/doc_extractor_windows.yaml ^
+# Run with:  heddle processor --config configs/workers/doc_extractor_windows.yaml ^
 #                           --nats-url nats://localhost:4222
 
 name: "doc_extractor"

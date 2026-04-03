@@ -1,5 +1,5 @@
 site_name: Docman
-site_description: Document processing pipeline built on the Loom framework
+site_description: Document processing pipeline built on the Heddle framework
 site_url: https://irantransitionproject.github.io/docman/
 repo_url: https://github.com/IranTransitionProject/docman
 repo_name: IranTransitionProject/docman

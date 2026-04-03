@@ -9,12 +9,12 @@
 ## Mission Constraint
 
 This project exists to provide a reference implementation and test harness for
-the Loom framework's document processing capabilities. All governance decisions
+the Heddle framework's document processing capabilities. All governance decisions
 must be evaluated against a single test: does this decision serve that mission
 or does it serve something else?
 
-Decisions that compromise Docman's role as a faithful test of the Loom framework
-architecture — by circumventing Loom abstractions, hard-coding provider-specific
+Decisions that compromise Docman's role as a faithful test of the Heddle framework
+architecture — by circumventing Heddle abstractions, hard-coding provider-specific
 logic, or abandoning the pipeline model — are incompatible with the mission and
 constitute grounds for leadership review.
 
@@ -61,7 +61,7 @@ If the Founder is unable to act and the project has been inactive for 90+ days:
 A successor must:
 
 - Accept the mission constraint without reservation
-- Commit to maintaining the project as a Loom framework consumer
+- Commit to maintaining the project as a Heddle framework consumer
 - Maintain the MPL 2.0 public license (alternative licensing rights
   revert to the copyright holder and do not automatically transfer)
 

@@ -1,8 +1,8 @@
 """
-Docman DuckDB query backend — thin subclass of loom.contrib.duckdb.
+Docman DuckDB query backend — thin subclass of heddle.contrib.duckdb.
 
 Provides Docman-specific schema defaults (table name, columns, filters,
-stats groups) on top of the generic DuckDBQueryBackend from LOOM.
+stats groups) on top of the generic DuckDBQueryBackend from Heddle.
 
 Input:  {"action": "search|filter|stats|get|vector_search", ...action-specific params}
 Output: {"results": [...], "total": int} or {"document": {...}}
@@ -14,10 +14,10 @@ See Also:
 
 from __future__ import annotations
 
-from loom.contrib.duckdb import (
+from heddle.contrib.duckdb import (
     DuckDBQueryBackend as _BaseDuckDBQueryBackend,
 )
-from loom.contrib.duckdb import (
+from heddle.contrib.duckdb import (
     DuckDBQueryError,
 )
 

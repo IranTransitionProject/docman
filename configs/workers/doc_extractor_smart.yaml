@@ -2,10 +2,10 @@
 # Tries MarkItDown first (fast, no ML) and falls back to Docling (OCR,
 # table structure) when the fast path produces insufficient text.
 #
-# Run with:  loom processor --config configs/workers/doc_extractor_smart.yaml \
+# Run with:  heddle processor --config configs/workers/doc_extractor_smart.yaml \
 #                           --nats-url nats://localhost:4222 \
 #                           --workspace-dir /tmp/docman-workspace
-# Subscribes to: loom.tasks.doc_extractor.local
+# Subscribes to: heddle.tasks.doc_extractor.local
 #
 # NOTE: The docman package must be installed for the processing_backend
 #       class path to resolve. Install with: pip install -e /path/to/docman

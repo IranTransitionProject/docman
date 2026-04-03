@@ -28,8 +28,8 @@ Docling tuning options can be passed via backend_config in the worker YAML:
 See Also:
     configs/workers/doc_extractor.yaml -- worker config with I/O schemas
     docs/docling-setup.md -- full Docling configuration and tuning guide
-    loom.worker.processor.SyncProcessingBackend -- base class for sync backends
-    loom.core.workspace.WorkspaceManager -- file-ref resolution with path safety
+    heddle.worker.processor.SyncProcessingBackend -- base class for sync backends
+    heddle.core.workspace.WorkspaceManager -- file-ref resolution with path safety
 """
 
 from __future__ import annotations
@@ -39,8 +39,8 @@ import platform
 from pathlib import Path
 from typing import Any
 
-from loom.core.workspace import WorkspaceManager
-from loom.worker.processor import BackendError, SyncProcessingBackend
+from heddle.core.workspace import WorkspaceManager
+from heddle.worker.processor import BackendError, SyncProcessingBackend
 
 logger = logging.getLogger(__name__)
 

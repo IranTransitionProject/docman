@@ -12,7 +12,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from loom.worker.processor import BackendError
+from heddle.worker.processor import BackendError
 
 from docman.backends.markitdown_backend import MarkItDownBackend, MarkItDownConversionError
 

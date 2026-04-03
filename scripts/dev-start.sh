@@ -14,7 +14,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCMAN_DIR="$(dirname "$SCRIPT_DIR")"
-LOOM_DIR="$(dirname "$DOCMAN_DIR")/loom"
+HEDDLE_DIR="$(dirname "$DOCMAN_DIR")/heddle"
 WORKSPACE="/tmp/docman-workspace"
 PID_DIR="$DOCMAN_DIR/.dev-pids"
 
@@ -38,7 +38,7 @@ check_prereqs() {
     # Check NATS
     if ! docker ps --format '{{.Names}}' | grep -q nats; then
         err "NATS container not running. Start with:"
-        err "  docker run -d --name loom-nats -p 4222:4222 nats:2.10-alpine"
+        err "  docker run -d --name heddle-nats -p 4222:4222 nats:2.10-alpine"
         exit 1
     fi
     log "NATS: running"
@@ -86,35 +86,35 @@ cmd_start() {
 
     # 1. Router
     start_component "router" \
-        loom router \
-            --config "$LOOM_DIR/configs/router_rules.yaml" \
+        heddle router \
+            --config "$HEDDLE_DIR/configs/router_rules.yaml" \
             --nats-url "$NATS_URL"
 
     sleep 1
 
     # 2. Doc Extractor (processor worker with DoclingBackend)
     start_component "extractor" \
-        loom processor \
+        heddle processor \
             --config configs/workers/doc_extractor.yaml \
             --nats-url "$NATS_URL"
 
     # 3. Doc Classifier (LLM worker — local tier via Ollama)
     start_component "classifier" \
-        loom worker \
+        heddle worker \
             --config configs/workers/doc_classifier.yaml \
             --tier local \
             --nats-url "$NATS_URL"
 
     # 4. Doc Summarizer (LLM worker — local tier via Ollama)
     start_component "summarizer" \
-        loom worker \
+        heddle worker \
             --config configs/workers/doc_summarizer_local.yaml \
             --tier local \
             --nats-url "$NATS_URL"
 
     # 5. Pipeline Orchestrator
     start_component "pipeline" \
-        loom pipeline \
+        heddle pipeline \
             --config configs/orchestrators/doc_pipeline_local.yaml \
             --nats-url "$NATS_URL"
 
@@ -133,7 +133,7 @@ cmd_start() {
 cmd_submit() {
     local file="${1:-test_report.pdf}"
     log "Submitting document: $file"
-    loom submit "Process document" \
+    heddle submit "Process document" \
         --context "file_ref=$file" \
         --nats-url "$NATS_URL"
 }

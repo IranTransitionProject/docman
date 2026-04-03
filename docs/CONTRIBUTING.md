@@ -7,8 +7,8 @@ Thank you for your interest in contributing to Docman.
 ## Before You Contribute
 
 **Read [`GOVERNANCE.md`](../GOVERNANCE.md) first.** This project serves as a
-reference implementation and test harness for the Loom framework. Contributions
-must work within Loom's architecture — using its ABCs, messaging patterns, and
+reference implementation and test harness for the Heddle framework. Contributions
+must work within Heddle's architecture — using its ABCs, messaging patterns, and
 pipeline model.
 
 ---
@@ -39,9 +39,9 @@ If you have questions about the CLA before contributing, contact: <admin@irantra
 
 Contributions must adhere to the project's architectural rules:
 
-**Use Loom abstractions:**
-Backends must implement `ProcessingBackend` or `SyncProcessingBackend` from Loom.
-Do not bypass Loom's worker/processor model with direct function calls.
+**Use Heddle abstractions:**
+Backends must implement `ProcessingBackend` or `SyncProcessingBackend` from Heddle.
+Do not bypass Heddle's worker/processor model with direct function calls.
 
 **Path traversal protection:**
 All file operations must validate paths via `WorkspaceManager`. File references
@@ -63,7 +63,7 @@ and mocked backends for testing.
 - New processing backends (additional document formats, extraction engines)
 - Pipeline stage improvements (better classification, multi-language support)
 - Integration tests with NATS infrastructure
-- Wire `resolve_file_refs` in summarizer config (Loom support exists, needs config update)
+- Wire `resolve_file_refs` in summarizer config (Heddle support exists, needs config update)
 - MCP gateway examples and transport extensions
 - Documentation improvements and examples
 - Bug reports with reproducible steps
@@ -72,7 +72,7 @@ and mocked backends for testing.
 
 ## What We Are Not Looking For
 
-- Backends that bypass Loom's `ProcessingBackend` ABC
+- Backends that bypass Heddle's `ProcessingBackend` ABC
 - Direct LLM calls that skip worker I/O contract validation
 - Provider-specific logic that cannot be abstracted
 - Dependencies that only work on a single platform without alternatives
@@ -87,7 +87,7 @@ and mocked backends for testing.
 4. Ensure all tests pass: `uv run pytest tests/ -v`
 5. Submit a pull request with a clear description of what changed and why
 
-Expect review feedback focused on Loom compatibility and test coverage.
+Expect review feedback focused on Heddle compatibility and test coverage.
 
 ---
 
@@ -98,7 +98,7 @@ documents the project's architecture, pipeline design, and current state for
 AI-assisted sessions.
 
 AI-generated code is subject to the same standards as human contributions:
-Loom-compatible backends, validated I/O contracts, and test coverage.
+Heddle-compatible backends, validated I/O contracts, and test coverage.
 
 ---
 

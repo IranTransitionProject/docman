@@ -1,11 +1,11 @@
 # Docman MCP server — exposes the document pipeline and query backend as MCP tools.
 #
 # Run with:
-#   loom mcp --config configs/mcp/docman.yaml
-#   loom mcp --config configs/mcp/docman.yaml --transport streamable-http --port 8000
+#   heddle mcp --config configs/mcp/docman.yaml
+#   heddle mcp --config configs/mcp/docman.yaml --transport streamable-http --port 8000
 #
 # Requires:
-#   pip install loom[mcp,duckdb]
+#   pip install heddle-ai[mcp,duckdb]
 #   NATS running at nats://localhost:4222
 #   Docman workers started (doc_extractor, doc_classifier, doc_summarizer, doc_ingest)
 #

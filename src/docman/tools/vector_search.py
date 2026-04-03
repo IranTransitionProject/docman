@@ -1,8 +1,8 @@
 """
-Docman vector similarity search — thin wrapper around loom.contrib.duckdb.
+Docman vector similarity search — thin wrapper around heddle.contrib.duckdb.
 
 Provides Docman-specific defaults (table, columns, tool name) on top of the
-generic DuckDBVectorTool from LOOM.
+generic DuckDBVectorTool from Heddle.
 
 Example knowledge_silos config::
 
@@ -17,7 +17,7 @@ Example knowledge_silos config::
 
 from __future__ import annotations
 
-from loom.contrib.duckdb import DuckDBVectorTool as _BaseDuckDBVectorTool
+from heddle.contrib.duckdb import DuckDBVectorTool as _BaseDuckDBVectorTool
 
 # Docman-specific columns returned in search results.
 _DOCMAN_RESULT_COLUMNS = [

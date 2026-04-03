@@ -66,7 +66,7 @@ class TestEmbeddingSuccess:
     """Tests for successful embedding generation."""
 
     @patch("docman.backends.duckdb_ingest.asyncio.run")
-    @patch("loom.worker.embeddings.OllamaEmbeddingProvider")
+    @patch("heddle.worker.embeddings.OllamaEmbeddingProvider")
     def test_successful_embedding_returns_float_list(
         self, mock_provider_cls, mock_asyncio_run, backend
     ):
@@ -84,7 +84,7 @@ class TestEmbeddingSuccess:
         )
 
     @patch("docman.backends.duckdb_ingest.asyncio.run")
-    @patch("loom.worker.embeddings.OllamaEmbeddingProvider")
+    @patch("heddle.worker.embeddings.OllamaEmbeddingProvider")
     def test_text_under_limit_sent_in_full(self, mock_provider_cls, mock_asyncio_run, backend):
         """Text shorter than _EMBED_TEXT_LIMIT should be sent without truncation."""
         short_text = "A" * 100
@@ -102,7 +102,7 @@ class TestEmbeddingSuccess:
         assert len(actual_text) == 100
 
     @patch("docman.backends.duckdb_ingest.asyncio.run")
-    @patch("loom.worker.embeddings.OllamaEmbeddingProvider")
+    @patch("heddle.worker.embeddings.OllamaEmbeddingProvider")
     def test_text_over_limit_truncated(self, mock_provider_cls, mock_asyncio_run, backend):
         """Text longer than _EMBED_TEXT_LIMIT should be truncated to 8000 chars."""
         long_text = "B" * 12000
@@ -117,7 +117,7 @@ class TestEmbeddingSuccess:
         assert len(actual_text) == _EMBED_TEXT_LIMIT
 
     @patch("docman.backends.duckdb_ingest.asyncio.run")
-    @patch("loom.worker.embeddings.OllamaEmbeddingProvider")
+    @patch("heddle.worker.embeddings.OllamaEmbeddingProvider")
     def test_default_model_used_when_not_specified(
         self, mock_provider_cls, mock_asyncio_run, backend
     ):
@@ -142,7 +142,7 @@ class TestEmbeddingErrors:
     """Tests for embedding failure scenarios."""
 
     @patch("docman.backends.duckdb_ingest.asyncio.run")
-    @patch("loom.worker.embeddings.OllamaEmbeddingProvider")
+    @patch("heddle.worker.embeddings.OllamaEmbeddingProvider")
     def test_provider_failure_returns_none(self, mock_provider_cls, mock_asyncio_run, backend):
         """If the embedding provider raises, _generate_embedding returns None."""
         mock_asyncio_run.side_effect = ConnectionError("Ollama not running")

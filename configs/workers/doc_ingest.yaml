@@ -2,9 +2,9 @@
 # This is a PROCESSOR worker (not LLM). It runs DuckDBIngestBackend to persist
 # document metadata, classification, summary, and full extracted text into DuckDB.
 #
-# Run with:  loom processor --config configs/workers/doc_ingest.yaml \
+# Run with:  heddle processor --config configs/workers/doc_ingest.yaml \
 #                           --nats-url nats://localhost:4222
-# Subscribes to: loom.tasks.doc_ingest.local
+# Subscribes to: heddle.tasks.doc_ingest.local
 #
 # NOTE: The docman package must be installed for the processing_backend
 #       class path to resolve. Install with: pip install -e /path/to/docman

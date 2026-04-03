@@ -1,6 +1,6 @@
 # Docman
 
-**Document processing pipeline built on the Loom framework.**
+**Document processing pipeline built on the Heddle framework.**
 
 Docman extracts content from PDF, DOCX, PPTX, XLSX, and HTML files using an adaptive two-tier extraction strategy (MarkItDown for speed, Docling for depth), with LLM-based classification and summarization.
 
@@ -35,5 +35,5 @@ uv run mkdocs serve
 
 ## Project links
 
-- [Loom framework](https://irantransitionproject.github.io/loom/)
+- [Heddle framework](https://getheddle.github.io/heddle/)
 - [GitHub repository](https://github.com/IranTransitionProject/docman)

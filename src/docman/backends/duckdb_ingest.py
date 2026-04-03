@@ -19,8 +19,8 @@ Output: {"document_id": str, "status": "inserted", "source_file": str}
 See Also:
     configs/workers/doc_ingest.yaml -- worker config with I/O schemas
     src/docman/backends/duckdb_query.py -- query/analytics backend
-    loom.worker.processor.SyncProcessingBackend -- base class for sync backends
-    loom.core.workspace.WorkspaceManager -- file-ref resolution with path safety
+    heddle.worker.processor.SyncProcessingBackend -- base class for sync backends
+    heddle.core.workspace.WorkspaceManager -- file-ref resolution with path safety
 """
 
 from __future__ import annotations
@@ -34,8 +34,8 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
-from loom.core.workspace import WorkspaceManager
-from loom.worker.processor import BackendError, SyncProcessingBackend
+from heddle.core.workspace import WorkspaceManager
+from heddle.worker.processor import BackendError, SyncProcessingBackend
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +180,7 @@ class DuckDBIngestBackend(SyncProcessingBackend):
             return None
 
         # Import here to avoid hard dependency when embeddings aren't used.
-        from loom.worker.embeddings import OllamaEmbeddingProvider
+        from heddle.worker.embeddings import OllamaEmbeddingProvider
 
         provider = OllamaEmbeddingProvider(
             model=embedding_config.get("model", "nomic-embed-text"),

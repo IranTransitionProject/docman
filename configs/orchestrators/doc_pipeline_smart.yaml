@@ -2,12 +2,12 @@
 # Uses SmartExtractorBackend (MarkItDown-first, Docling fallback) for
 # faster processing of well-structured digital documents.
 #
-# Run with:  loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml \
+# Run with:  heddle pipeline --config configs/orchestrators/doc_pipeline_smart.yaml \
 #                          --nats-url nats://localhost:4222
-# Submit:    loom submit "Process document" --context file_ref=report.pdf
+# Submit:    heddle submit "Process document" --context file_ref=report.pdf
 #
 # Requires doc_extractor_smart.yaml worker config instead of doc_extractor.yaml:
-#   loom processor --config configs/workers/doc_extractor_smart.yaml \
+#   heddle processor --config configs/workers/doc_extractor_smart.yaml \
 #                  --nats-url nats://localhost:4222
 
 name: "doc_pipeline"

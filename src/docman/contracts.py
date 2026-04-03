@@ -3,7 +3,7 @@
 Each model defines the typed input or output schema for a pipeline stage
 or standalone worker.  These are the **source of truth** — worker YAML
 configs reference them via ``input_schema_ref`` / ``output_schema_ref``,
-and Loom's ``resolve_schema_refs()`` converts them to JSON Schema at load
+and Heddle's ``resolve_schema_refs()`` converts them to JSON Schema at load
 time.
 
 Models:

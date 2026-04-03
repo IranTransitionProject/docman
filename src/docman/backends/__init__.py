@@ -1,4 +1,4 @@
-"""Docman processing backends for Loom pipeline stages."""
+"""Docman processing backends for Heddle pipeline stages."""
 
 from docman.backends.docling_backend import DoclingBackend
 from docman.backends.duckdb_ingest import DuckDBIngestBackend

@@ -15,7 +15,7 @@ import json
 
 import duckdb
 import pytest
-from loom.worker.processor import BackendError
+from heddle.worker.processor import BackendError
 
 from docman.backends.duckdb_ingest import DuckDBError, DuckDBIngestBackend
 

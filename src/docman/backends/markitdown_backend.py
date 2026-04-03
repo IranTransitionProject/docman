@@ -22,7 +22,7 @@ sections), so these are derived from the Markdown output:
 See Also:
     configs/workers/doc_extractor_smart.yaml -- smart extractor config
     docman.backends.smart_extractor -- composite backend with fallback
-    loom.worker.processor.SyncProcessingBackend -- base class
+    heddle.worker.processor.SyncProcessingBackend -- base class
 """
 
 from __future__ import annotations
@@ -32,8 +32,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from loom.core.workspace import WorkspaceManager
-from loom.worker.processor import BackendError, SyncProcessingBackend
+from heddle.core.workspace import WorkspaceManager
+from heddle.worker.processor import BackendError, SyncProcessingBackend
 
 logger = logging.getLogger(__name__)
 

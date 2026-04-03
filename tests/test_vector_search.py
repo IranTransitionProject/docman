@@ -1,6 +1,6 @@
 """Tests for Docman's DuckDBVectorTool wrapper — verifies Docman-specific defaults.
 
-Core search/similarity logic is tested in LOOM (tests/test_contrib_duckdb_vector.py).
+Core search/similarity logic is tested in Heddle (tests/test_contrib_duckdb_vector.py).
 This file only tests that the Docman wrapper sets the correct defaults.
 """
 
@@ -85,7 +85,7 @@ class TestDocmanDefaults:
             assert "summary" in r
             assert "similarity" in r
 
-    def test_is_subclass_of_loom_vector_tool(self):
-        from loom.contrib.duckdb import DuckDBVectorTool as LoomVectorTool
+    def test_is_subclass_of_heddle_vector_tool(self):
+        from heddle.contrib.duckdb import DuckDBVectorTool as HeddleVectorTool
 
-        assert issubclass(DuckDBVectorTool, LoomVectorTool)
+        assert issubclass(DuckDBVectorTool, HeddleVectorTool)

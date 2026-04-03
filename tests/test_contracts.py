@@ -3,7 +3,7 @@ Tests for Pydantic I/O contracts.
 
 Validates that every contract model:
     - Accepts valid data and rejects invalid data.
-    - Generates a JSON Schema (used by Loom's resolve_schema_refs).
+    - Generates a JSON Schema (used by Heddle's resolve_schema_refs).
     - Has required/optional fields as expected by the worker configs.
 """
 

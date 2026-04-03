@@ -5,17 +5,17 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-<!-- Keep in sync with loom pyproject.toml version -->
-[![Built on Loom](https://img.shields.io/badge/built_on-Loom_v0.8.0-blueviolet.svg)](https://github.com/IranTransitionProject/loom)
+<!-- Keep in sync with heddle pyproject.toml version -->
+[![Built on Heddle](https://img.shields.io/badge/built_on-Heddle_v0.8.0-blueviolet.svg)](https://github.com/getheddle/heddle)
 [![Status: Active Development](https://img.shields.io/badge/status-active_development-brightgreen.svg)]()
 
-**PDF/DOCX extraction, LLM classification and summarization, DuckDB persistence — built on the [Loom](https://github.com/IranTransitionProject/loom) framework.**
+**PDF/DOCX extraction, LLM classification and summarization, DuckDB persistence — built on the [Heddle](https://github.com/getheddle/heddle) framework.**
 
 ---
 
 ## What This Project Does
 
-Docman is a document processing pipeline that evaluates Loom's actor-based
+Docman is a document processing pipeline that evaluates Heddle's actor-based
 architecture with a real-world workload. It takes PDF and DOCX files through
 four stages:
 
@@ -30,19 +30,19 @@ A standalone `doc_query` worker provides full-text search, filtering, statistics
 and semantic vector search against the DuckDB database.
 
 The entire system can be exposed as an **MCP (Model Context Protocol) server**
-using Loom's built-in MCP gateway — a single YAML config, zero MCP-specific code.
+using Heddle's built-in MCP gateway — a single YAML config, zero MCP-specific code.
 
 ---
 
 ## Who This Is For
 
-**Developers evaluating Loom** who want to see how the framework handles a
+**Developers evaluating Heddle** who want to see how the framework handles a
 multi-stage pipeline with mixed worker types (LLM and processor).
 
 **Document processing engineers** who need a pipeline for extracting, classifying,
 and searching document collections.
 
-**Anyone** building on the Loom framework who wants a reference implementation
+**Anyone** building on the Heddle framework who wants a reference implementation
 to study or fork.
 
 ---
@@ -59,7 +59,7 @@ to study or fork.
 | Pipeline configs (standard + local tier) | Complete |
 | MCP gateway config | Complete |
 | Unit tests | 124 passing |
-| Summarizer file-ref resolution | Config pending (Loom support exists) |
+| Summarizer file-ref resolution | Config pending (Heddle support exists) |
 
 ---
 
@@ -79,7 +79,7 @@ pipeline, see the platform-specific guides below.
 ## Documentation
 
 - **[Architecture](docs/ARCHITECTURE.md)** — Pipeline stages, data flow, DuckDB
-  tools, design rules, Loom integration details
+  tools, design rules, Heddle integration details
 - **[macOS Setup](docs/setup-macos.md)** — Full environment setup for Apple Silicon
 - **[Windows Setup](docs/setup-windows.md)** — Full environment setup for
   Windows 11 / WSL2

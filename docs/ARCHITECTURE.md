@@ -6,13 +6,13 @@
 
 ## Overview
 
-Docman is a document processing pipeline built on the Loom framework. It
-evaluates Loom's actor-based architecture with a real-world pipeline: extract
+Docman is a document processing pipeline built on the Heddle framework. It
+evaluates Heddle's actor-based architecture with a real-world pipeline: extract
 text from PDF/DOCX documents using Docling, classify and summarize them with
 LLMs, then persist everything to DuckDB for search and analysis.
 
-Docman is a **consumer** of Loom — it provides concrete backends, worker configs,
-and pipeline definitions. The Loom framework itself lives in a separate repo.
+Docman is a **consumer** of Heddle — it provides concrete backends, worker configs,
+and pipeline definitions. The Heddle framework itself lives in a separate repo.
 
 ---
 
@@ -63,7 +63,7 @@ tests/                      # 40 unit tests (no infrastructure needed)
 
 ## Pipeline Stages
 
-The pipeline processes documents through four stages. Loom's `PipelineOrchestrator`
+The pipeline processes documents through four stages. Heddle's `PipelineOrchestrator`
 auto-infers dependencies from `input_mapping` paths and runs independent stages
 concurrently. In Docman's case, each stage depends on the previous one, so
 execution remains sequential:
@@ -97,7 +97,7 @@ NATS queue groups handle load balancing automatically.
 - **Type:** LLMWorker (standard or local tier)
 - **What it does:** LLM produces structured summary adapted to document type
 - **Output:** Summary (2-5 paragraphs), key points, word count
-- **Config pending:** Loom's `resolve_file_refs` now supports file-ref resolution; needs wiring in config
+- **Config pending:** Heddle's `resolve_file_refs` now supports file-ref resolution; needs wiring in config
 
 ### Stage 4: Ingest (`doc_ingest`)
 
@@ -127,17 +127,17 @@ database with five actions:
 
 ## DuckDB Tools
 
-Docman provides thin wrappers around `loom.contrib.duckdb` with document-specific
+Docman provides thin wrappers around `heddle.contrib.duckdb` with document-specific
 defaults:
 
-**DocmanQueryBackend** — subclass of `loom.contrib.duckdb.DuckDBQueryBackend` with
+**DocmanQueryBackend** — subclass of `heddle.contrib.duckdb.DuckDBQueryBackend` with
 Docman table schema (columns, filters, FTS fields, stats aggregates).
 
-**DuckDBVectorTool** — wrapper around `loom.contrib.duckdb.DuckDBVectorTool` with
+**DuckDBVectorTool** — wrapper around `heddle.contrib.duckdb.DuckDBVectorTool` with
 document table/column defaults, implements `SyncToolProvider` for LLM
 function-calling.
 
-**DuckDBViewTool** — used directly from `loom.contrib.duckdb` (no wrapper needed).
+**DuckDBViewTool** — used directly from `heddle.contrib.duckdb` (no wrapper needed).
 
 ---
 
@@ -150,7 +150,7 @@ carry only `file_ref` strings, not inline content.
 2. DoclingBackend reads source, writes extracted JSON to workspace
 3. Extractor returns `file_ref` pointing to extracted JSON + inline `text_preview`
 4. Classifier uses inline `text_preview` (no file access needed)
-5. Summarizer receives `file_ref` (Loom's `resolve_file_refs` can resolve this; config not yet wired)
+5. Summarizer receives `file_ref` (Heddle's `resolve_file_refs` can resolve this; config not yet wired)
 6. Ingest backend reads full text from workspace JSON, persists to DuckDB
 
 ---
@@ -181,11 +181,11 @@ use `FLOAT[]` (variable-length) and `list_cosine_similarity`.
 
 ---
 
-## Relationship to Loom
+## Relationship to Heddle
 
-Docman depends on `loom[duckdb]` as a package and uses these Loom components:
+Docman depends on `heddle[duckdb]` as a package and uses these Heddle components:
 
-| Loom Component | Docman Usage |
+| Heddle Component | Docman Usage |
 |----------------|-------------|
 | `ProcessingBackend` ABC | DoclingBackend, DuckDBIngestBackend |
 | `SyncProcessingBackend` | DuckDB backends (synchronous) |
@@ -208,12 +208,12 @@ processing_backend: "docman.backends.docling_backend.DoclingBackend"
 
 ## MCP Gateway
 
-Docman can be exposed as an MCP (Model Context Protocol) server using Loom's
+Docman can be exposed as an MCP (Model Context Protocol) server using Heddle's
 built-in MCP gateway. A single YAML config maps Docman's pipeline and query
 backend to MCP tools — no MCP-specific code needed.
 
 ```bash
-loom mcp --config configs/mcp/docman.yaml
+heddle mcp --config configs/mcp/docman.yaml
 ```
 
 The gateway auto-discovers tools from the config:

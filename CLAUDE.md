@@ -2,9 +2,9 @@
 
 ## What this project is
 
-Docman (v0.5.0) is a document processing pipeline built on the Loom framework. It extracts content from PDF, DOCX, PPTX, XLSX, and HTML files using an adaptive two-tier extraction strategy (MarkItDown for speed, Docling for depth), with LLM-based classification and summarization stages.
+Docman (v0.5.0) is a document processing pipeline built on the Heddle framework. It extracts content from PDF, DOCX, PPTX, XLSX, and HTML files using an adaptive two-tier extraction strategy (MarkItDown for speed, Docling for depth), with LLM-based classification and summarization stages.
 
-This is a **consumer** of the Loom framework — it provides concrete worker configs, processing backends, and pipeline definitions. The Loom framework itself lives in a separate repo.
+This is a **consumer** of the Heddle framework — it provides concrete worker configs, processing backends, and pipeline definitions. The Heddle framework itself lives in a separate repo.
 
 ## Project structure
 
@@ -16,10 +16,10 @@ src/docman/
     markitdown_backend.py # MarkItDownBackend — fast extraction via Microsoft MarkItDown (no ML)
     smart_extractor.py   # SmartExtractorBackend — MarkItDown-first, Docling fallback
     duckdb_ingest.py     # DuckDBIngestBackend — document persistence (serialize_writes=True)
-    duckdb_query.py      # DocmanQueryBackend — thin subclass of loom.contrib.duckdb.DuckDBQueryBackend
+    duckdb_query.py      # DocmanQueryBackend — thin subclass of heddle.contrib.duckdb.DuckDBQueryBackend
   tools/
-    vector_search.py     # DuckDBVectorTool — thin wrapper around loom.contrib.duckdb.DuckDBVectorTool
-manifest.yaml            # App manifest for Loom Workshop deployment
+    vector_search.py     # DuckDBVectorTool — thin wrapper around heddle.contrib.duckdb.DuckDBVectorTool
+manifest.yaml            # App manifest for Heddle Workshop deployment
 configs/
   workers/        # YAML configs for doc_extractor, doc_classifier, doc_summarizer, doc_ingest, doc_query
   orchestrators/  # Pipeline configs (doc_pipeline, doc_pipeline_local, doc_pipeline_smart)
@@ -27,7 +27,7 @@ configs/
 scripts/
   dev-start.sh    # Local development launcher
   dev-start.ps1   # Windows development launcher
-  build-app.sh    # Build deployment ZIP for Loom Workshop
+  build-app.sh    # Build deployment ZIP for Heddle Workshop
 docs/
   ARCHITECTURE.md   # System architecture overview
   CONTRIBUTING.md   # Contribution standards and CLA
@@ -37,18 +37,18 @@ docs/
 tests/            # Unit tests (mock backends, in-memory DuckDB, no infrastructure)
 ```
 
-## Relationship to Loom
+## Relationship to Heddle
 
-Docman depends on `loom-ai[duckdb]` as a package. It uses:
+Docman depends on `heddle[duckdb]` as a package. It uses:
 
 - `ProcessingBackend` ABC — DoclingBackend, MarkItDownBackend, SmartExtractorBackend, DuckDBIngestBackend implement this
-- `resolve_schema_refs()` — worker configs use `input_schema_ref` / `output_schema_ref` pointing to `docman.contracts.*` Pydantic models (Loom resolves to JSON Schema at load time)
-- `loom.contrib.duckdb.DuckDBQueryBackend` — DocmanQueryBackend subclasses this with Docman-specific schema defaults
-- `loom.contrib.duckdb.DuckDBVectorTool` — DuckDBVectorTool wraps this with Docman-specific column/table defaults
-- `loom.contrib.duckdb.DuckDBViewTool` — used directly (no Docman wrapper needed, already generic)
-- `ProcessorWorker` — runs extraction and DuckDB backends via `loom processor` CLI
-- `LLMWorker` — runs classifier and summarizer via `loom worker` CLI
-- `PipelineOrchestrator` — orchestrates the 4-stage pipeline via `loom pipeline` CLI (with dependency-aware parallel stage execution)
+- `resolve_schema_refs()` — worker configs use `input_schema_ref` / `output_schema_ref` pointing to `docman.contracts.*` Pydantic models (Heddle resolves to JSON Schema at load time)
+- `heddle.contrib.duckdb.DuckDBQueryBackend` — DocmanQueryBackend subclasses this with Docman-specific schema defaults
+- `heddle.contrib.duckdb.DuckDBVectorTool` — DuckDBVectorTool wraps this with Docman-specific column/table defaults
+- `heddle.contrib.duckdb.DuckDBViewTool` — used directly (no Docman wrapper needed, already generic)
+- `ProcessorWorker` — runs extraction and DuckDB backends via `heddle processor` CLI
+- `LLMWorker` — runs classifier and summarizer via `heddle worker` CLI
+- `PipelineOrchestrator` — orchestrates the 4-stage pipeline via `heddle pipeline` CLI (with dependency-aware parallel stage execution)
 
 The CLI loads backends by fully qualified class path from worker configs:
 
@@ -71,7 +71,7 @@ Docman provides three extraction backends, all producing the same output contrac
 3. **doc_summarizer** (LLMWorker) — LLM summarizes based on document type and extracted content. Returns summary, key_points, word_count.
 4. **doc_ingest** (ProcessorWorker + DuckDBIngestBackend) — Persists all pipeline results (metadata, classification, summary, full text) into DuckDB. Reads full extracted text from workspace JSON. Returns document_id.
 
-**Pipeline execution order:** Loom's `PipelineOrchestrator` auto-infers dependencies from `input_mapping` paths and runs independent stages concurrently. Docman's pipeline has genuinely sequential dependencies (classify depends on extract, summarize depends on both, ingest depends on all three), so it produces 4 levels of 1 stage each — sequential execution.
+**Pipeline execution order:** Heddle's `PipelineOrchestrator` auto-infers dependencies from `input_mapping` paths and runs independent stages concurrently. Docman's pipeline has genuinely sequential dependencies (classify depends on extract, summarize depends on both, ingest depends on all three), so it produces 4 levels of 1 stage each — sequential execution.
 
 **Pipeline variants:**
 
@@ -83,9 +83,9 @@ Docman provides three extraction backends, all producing the same output contrac
 
 ```bash
 # Process 3 documents concurrently — each instance handles one goal
-loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
-loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
-loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
+heddle pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
+heddle pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
+heddle pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
 ```
 
 ## Standalone workers
@@ -94,7 +94,7 @@ loom pipeline --config configs/orchestrators/doc_pipeline_smart.yaml &
 
 ## I/O contracts
 
-Worker I/O schemas are defined as Pydantic models in `src/docman/contracts.py`. Worker YAML configs reference them via `input_schema_ref` / `output_schema_ref`, and Loom's `resolve_schema_refs()` converts them to JSON Schema at load time.
+Worker I/O schemas are defined as Pydantic models in `src/docman/contracts.py`. Worker YAML configs reference them via `input_schema_ref` / `output_schema_ref`, and Heddle's `resolve_schema_refs()` converts them to JSON Schema at load time.
 
 Models: `ExtractorInput`, `ExtractorOutput`, `ClassifierInput`, `ClassifierOutput`, `SummarizerInput`, `SummarizerOutput`, `IngestInput`, `IngestOutput`, `QueryInput`, `QueryOutput`.
 
@@ -103,7 +103,7 @@ Models: `ExtractorInput`, `ExtractorOutput`, `ClassifierInput`, `ClassifierOutpu
 - Large data passes via **file references** in a shared workspace directory (`--workspace-dir`)
 - Messages carry only file_ref strings, not inline content
 - Extraction backends (MarkItDown, Docling) read source file from workspace, write extracted JSON to workspace
-- **Summarizer file resolution:** `resolve_file_refs: ["file_ref"]` and `workspace_dir` are set in the summarizer config — Loom's LLMWorker reads extracted JSON from workspace automatically.
+- **Summarizer file resolution:** `resolve_file_refs: ["file_ref"]` and `workspace_dir` are set in the summarizer config — Heddle's LLMWorker reads extracted JSON from workspace automatically.
 
 ## Docling configuration
 
@@ -120,14 +120,14 @@ Full guide: `docs/docling-setup.md`
 
 ## MCP gateway
 
-Docman can be exposed as an MCP (Model Context Protocol) server using Loom's built-in MCP gateway — zero MCP-specific code needed.
+Docman can be exposed as an MCP (Model Context Protocol) server using Heddle's built-in MCP gateway — zero MCP-specific code needed.
 
 ```bash
-# Start Docman as an MCP server (requires loom[mcp] and NATS + workers running)
-loom mcp --config configs/mcp/docman.yaml
+# Start Docman as an MCP server (requires heddle[mcp] and NATS + workers running)
+heddle mcp --config configs/mcp/docman.yaml
 
 # Or with streamable-http transport
-loom mcp --config configs/mcp/docman.yaml --transport streamable-http --port 8000
+heddle mcp --config configs/mcp/docman.yaml --transport streamable-http --port 8000
 ```
 
 The MCP config (`configs/mcp/docman.yaml`) maps Docman's workers and query backend to MCP tools:
@@ -136,7 +136,7 @@ The MCP config (`configs/mcp/docman.yaml`) maps Docman's workers and query backe
 - Query backend → `docman_search`, `docman_filter`, `docman_stats`, `docman_get` tools
 - Workspace files exposed as MCP resources
 
-See Loom's [Building Workflows](https://github.com/IranTransitionProject/loom/blob/main/docs/building-workflows.md) Part 11 for full MCP gateway documentation.
+See Heddle's [Building Workflows](https://github.com/getheddle/heddle/blob/main/docs/building-workflows.md) Part 11 for full MCP gateway documentation.
 
 ## Key design rules
 
@@ -152,13 +152,13 @@ See Loom's [Building Workflows](https://github.com/IranTransitionProject/loom/bl
 - Query results exclude `full_text` column by default to keep NATS messages small; use `get` action for full content
 - Vector embeddings use `FLOAT[]` (variable-length) column in DuckDB — use `list_cosine_similarity` (NOT `array_cosine_similarity` which requires fixed-size `FLOAT[N]`)
 - Embedding generation is optional — controlled by `embedding` config section in `doc_ingest.yaml`. When absent, embedding column stores NULL
-- DuckDBViewTool and DuckDBVectorTool implement Loom's `SyncToolProvider` for LLM function-calling via `knowledge_silos` config
+- DuckDBViewTool and DuckDBVectorTool implement Heddle's `SyncToolProvider` for LLM function-calling via `knowledge_silos` config
 
 ## Build and test commands
 
 ```bash
 # Install all dependencies (requires Python 3.11+, uses uv)
-# Loom is resolved from ../loom via [tool.uv.sources] in pyproject.toml
+# Heddle is resolved from ../heddle via [tool.uv.sources] in pyproject.toml
 uv sync --extra dev
 
 # Pre-download Docling detection models (avoids delay on first run)
@@ -167,23 +167,23 @@ uv run docling-tools models download
 # Run unit tests (no infrastructure needed)
 uv run pytest tests/ -v
 
-# Run with infrastructure (needs NATS + Loom installed)
+# Run with infrastructure (needs NATS + Heddle installed)
 # Terminal 1: docker run -p 4222:4222 nats:latest
-# Terminal 2: uv run loom router --nats-url nats://localhost:4222
-# Terminal 3: uv run loom processor --config configs/workers/doc_extractor.yaml --nats-url nats://localhost:4222
-# Terminal 4: OLLAMA_URL=http://localhost:11434 uv run loom worker --config configs/workers/doc_classifier.yaml --tier local --nats-url nats://localhost:4222
-# Terminal 5: ANTHROPIC_API_KEY=sk-... uv run loom worker --config configs/workers/doc_summarizer.yaml --tier standard --nats-url nats://localhost:4222
-# Terminal 6: uv run loom processor --config configs/workers/doc_ingest.yaml --nats-url nats://localhost:4222
-# Terminal 7: uv run loom processor --config configs/workers/doc_query.yaml --nats-url nats://localhost:4222
-# Terminal 8: uv run loom pipeline --config configs/orchestrators/doc_pipeline.yaml --nats-url nats://localhost:4222
-# Submit:     uv run loom submit "Process document" --context file_ref=test.pdf --nats-url nats://localhost:4222
+# Terminal 2: uv run heddle router --nats-url nats://localhost:4222
+# Terminal 3: uv run heddle processor --config configs/workers/doc_extractor.yaml --nats-url nats://localhost:4222
+# Terminal 4: OLLAMA_URL=http://localhost:11434 uv run heddle worker --config configs/workers/doc_classifier.yaml --tier local --nats-url nats://localhost:4222
+# Terminal 5: ANTHROPIC_API_KEY=sk-... uv run heddle worker --config configs/workers/doc_summarizer.yaml --tier standard --nats-url nats://localhost:4222
+# Terminal 6: uv run heddle processor --config configs/workers/doc_ingest.yaml --nats-url nats://localhost:4222
+# Terminal 7: uv run heddle processor --config configs/workers/doc_query.yaml --nats-url nats://localhost:4222
+# Terminal 8: uv run heddle pipeline --config configs/orchestrators/doc_pipeline.yaml --nats-url nats://localhost:4222
+# Submit:     uv run heddle submit "Process document" --context file_ref=test.pdf --nats-url nats://localhost:4222
 ```
 
 ## Current state
 
 The following items are **implemented and working**:
 
-- Pydantic I/O contracts (`src/docman/contracts.py`) — source of truth for all worker schemas, resolved at load time via Loom's `resolve_schema_refs()`
+- Pydantic I/O contracts (`src/docman/contracts.py`) — source of truth for all worker schemas, resolved at load time via Heddle's `resolve_schema_refs()`
 - MarkItDownBackend (`src/docman/backends/markitdown_backend.py`) — fast extraction via Microsoft MarkItDown, derives metadata from Markdown output
 - SmartExtractorBackend (`src/docman/backends/smart_extractor.py`) — composite MarkItDown-first with Docling fallback, configurable thresholds
 - DoclingBackend (`src/docman/backends/docling_backend.py`) — deep extraction with OCR, table structure, layout analysis
@@ -192,14 +192,14 @@ The following items are **implemented and working**:
 - DuckDBVectorTool (`src/docman/tools/vector_search.py`) — thin wrapper with Docman-specific defaults
 - Worker configs for all pipeline stages + standalone query worker — using `input_schema_ref`/`output_schema_ref`
 - Pipeline configs: `doc_pipeline.yaml` (Docling), `doc_pipeline_local.yaml` (all local), `doc_pipeline_smart.yaml` (MarkItDown-first)
-- App manifest (`manifest.yaml`) — declares all configs, Python package, and required Loom extras
-- Build script (`scripts/build-app.sh`) — generates deployment ZIP for Loom Workshop
+- App manifest (`manifest.yaml`) — declares all configs, Python package, and required Heddle extras
+- Build script (`scripts/build-app.sh`) — generates deployment ZIP for Heddle Workshop
 
 ## What to implement next
 
 1. **End-to-end test** — With NATS, Valkey, and Ollama running locally
-2. **Design a parallel pipeline variant** — Current pipeline is inherently sequential, but a variant could run classify and summarize concurrently if the summarizer doesn't need `document_type` (Loom's pipeline parallelism would auto-detect this from input_mapping)
-3. **MCP progress notifications** — When Loom's MCP bridge wires progress callbacks to MCP progress tokens, Docman's pipeline would automatically report per-stage progress to MCP clients
+2. **Design a parallel pipeline variant** — Current pipeline is inherently sequential, but a variant could run classify and summarize concurrently if the summarizer doesn't need `document_type` (Heddle's pipeline parallelism would auto-detect this from input_mapping)
+3. **MCP progress notifications** — When Heddle's MCP bridge wires progress callbacks to MCP progress tokens, Docman's pipeline would automatically report per-stage progress to MCP clients
 
 ## Environment
 

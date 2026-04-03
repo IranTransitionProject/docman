@@ -13,7 +13,7 @@ No prior developer experience is assumed. If you already have some of these tool
 - **Git** — version control for downloading and contributing to the code
 - **Docker Desktop** — runs NATS (message broker) and Valkey (data store) in containers
 - **Ollama** — runs AI models locally on your PC
-- **Loom** — the orchestration framework
+- **Heddle** — the orchestration framework
 - **Docman** — the document processing pipeline you'll be testing
 
 Total time: roughly 45–60 minutes (depending on your internet speed).
@@ -179,8 +179,8 @@ You should see `command-r7b:latest` in the list.
 Make sure Docker Desktop is running (check for its icon in the system tray), then:
 
 ```powershell
-docker run -d --name loom-nats -p 4222:4222 nats:2.10-alpine
-docker run -d --name loom-valkey -p 6379:6379 valkey/valkey:8-alpine
+docker run -d --name heddle-nats -p 4222:4222 nats:2.10-alpine
+docker run -d --name heddle-valkey -p 6379:6379 valkey/valkey:8-alpine
 ```
 
 Verify they're running:
@@ -189,12 +189,12 @@ Verify they're running:
 docker ps
 ```
 
-You should see two containers: `loom-nats` and `loom-valkey`.
+You should see two containers: `heddle-nats` and `heddle-valkey`.
 
 > **Note:** These containers stop when you restart your PC or close Docker Desktop. To start them again:
 >
 > ```powershell
-> docker start loom-nats loom-valkey
+> docker start heddle-nats heddle-valkey
 > ```
 
 ---
@@ -207,9 +207,9 @@ Create a directory for the project and clone the repositories:
 mkdir C:\Dev\IranTransitionProject
 cd C:\Dev\IranTransitionProject
 
-git clone https://github.com/IranTransitionProject/loom.git
+git clone https://github.com/getheddle/heddle.git
 git clone https://github.com/IranTransitionProject/docman.git
-git clone https://github.com/IranTransitionProject/framework.git
+git clone https://github.com/IranTransitionProject/baseline.git
 ```
 
 > **Note:** If these are private repositories, you'll need to authenticate with GitHub first:
@@ -223,17 +223,17 @@ git clone https://github.com/IranTransitionProject/framework.git
 
 ---
 
-## Step 9: Install Loom and Docman
+## Step 9: Install Heddle and Docman
 
 `uv` manages virtual environments and dependencies automatically — no manual venv activation needed.
 
 ```powershell
-# Install Loom (the framework) with all extras
-cd C:\Dev\IranTransitionProject\loom
+# Install Heddle (the framework) with all extras
+cd C:\Dev\IranTransitionProject\heddle
 uv sync --all-extras
 
 # Install Docman (the test project) with dev tools
-# This also resolves Loom from the sibling directory automatically
+# This also resolves Heddle from the sibling directory automatically
 cd C:\Dev\IranTransitionProject\docman
 uv sync --extra dev
 ```
@@ -251,10 +251,10 @@ This will download and install many packages (including PyTorch for document pro
 Verify installation:
 
 ```powershell
-uv run loom --help
+uv run heddle --help
 ```
 
-You should see a list of Loom commands: `worker`, `processor`, `pipeline`, `orchestrator`, `scheduler`, `router`, `submit`, `mcp`.
+You should see a list of Heddle commands: `worker`, `processor`, `pipeline`, `orchestrator`, `scheduler`, `router`, `submit`, `mcp`.
 
 ---
 
@@ -275,8 +275,8 @@ This downloads a few hundred MB. They're cached in your user profile under `.cac
 Verify everything is installed correctly:
 
 ```powershell
-# Test Loom
-cd C:\Dev\IranTransitionProject\loom
+# Test Heddle
+cd C:\Dev\IranTransitionProject\heddle
 uv run pytest tests/ -v --ignore=tests/test_integration.py
 
 # Test Docman
@@ -284,7 +284,7 @@ cd C:\Dev\IranTransitionProject\docman
 uv run pytest tests/ -v
 ```
 
-All tests should pass (green). The Loom integration test is excluded because it needs the full pipeline running.
+All tests should pass (green). The Heddle integration test is excluded because it needs the full pipeline running.
 
 ---
 
@@ -358,17 +358,17 @@ Workers are defined by YAML configuration files. To create a new one:
 3. Start it:
 
    ```powershell
-   uv run loom worker --config configs\workers\my_new_worker.yaml --tier local --nats-url nats://localhost:4222
+   uv run heddle worker --config configs\workers\my_new_worker.yaml --tier local --nats-url nats://localhost:4222
    ```
 
-See `loom\configs\workers\_template.yaml` for a blank template with documentation.
+See `heddle\configs\workers\_template.yaml` for a blank template with documentation.
 
 ### Adding a new processing backend
 
 Processing backends handle non-LLM tasks (like document extraction). To create one:
 
 1. Create a new Python file in `docman\src\docman\backends\`
-2. Implement the `ProcessingBackend` interface from Loom
+2. Implement the `ProcessingBackend` interface from Heddle
 3. Reference it in a worker config:
 
    ```yaml
@@ -442,12 +442,12 @@ Run this once:
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-### "loom is not recognized"
+### "heddle is not recognized"
 
-Use `uv run loom` instead of bare `loom`. Or re-run `uv sync` in the project directory:
+Use `uv run heddle` instead of bare `heddle`. Or re-run `uv sync` in the project directory:
 
 ```powershell
-cd C:\Dev\IranTransitionProject\loom
+cd C:\Dev\IranTransitionProject\heddle
 uv sync --all-extras
 ```
 
